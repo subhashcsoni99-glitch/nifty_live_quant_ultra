@@ -1,0 +1,102 @@
+========================================================================
+📊 NIFTY BACKTEST v9 (+NoSigExit) | 2023-05-13 → 2026-05-12 (3y)
+========================================================================
+
+🔄 SBIN... ✅ trds=21 WR=47.6% RealRet=-1.41% CompRet=+0.08% Sharpe=-0.01 DD=0.43%
+
+🔄 BHEL... ⚠️  trds=12 WR=25.0% RealRet=+6.25% CompRet=+8.67% Sharpe=0.54 DD=0.0%
+
+🔄 HINDALCO... ⚠️  trds=2 WR=50.0% RealRet=+8.78% CompRet=+9.53% Sharpe=0.0 DD=0.0%
+
+🔄 BAJFINANCE... ⚠️  trds=9 WR=77.8% RealRet=+2.36% CompRet=+6.09% Sharpe=1.04 DD=0.0%
+
+🔄 HDFCBANK... ⚠️  trds=6 WR=50.0% RealRet=-0.63% CompRet=+0.58% Sharpe=-0.38 DD=0.98%
+
+🔄 RELIANCE... ✅ trds=22 WR=50.0% RealRet=-1.47% CompRet=-0.62% Sharpe=-0.27 DD=0.62%
+
+🔄 TCS... ⚠️  trds=22 WR=13.6% RealRet=-5.24% CompRet=-4.04% Sharpe=-3.19 DD=4.04%
+
+🔄 ITC... ✅ trds=21 WR=47.6% RealRet=-1.33% CompRet=+0.10% Sharpe=-0.6 DD=1.59%
+
+🔄 HCLTECH... ⚠️  trds=24 WR=41.7% RealRet=-5.90% CompRet=-5.06% Sharpe=-1.79 DD=5.06%
+
+🔄 WIPRO... ⚠️  trds=9 WR=22.2% RealRet=-3.01% CompRet=-1.64% Sharpe=-1.55 DD=1.64%
+
+🔄 TECHM... ⚠️  trds=3 WR=33.3% RealRet=+1.70% CompRet=+2.42% Sharpe=3.93 DD=0.0%
+
+🔄 INDUSINDBK... ⚠️  trds=25 WR=20.0% RealRet=-6.37% CompRet=-4.48% Sharpe=-2.74 DD=4.48%
+
+🔄 BAJAJFINSV... ⚠️  trds=16 WR=31.2% RealRet=-2.50% CompRet=-0.29% Sharpe=-0.4 DD=0.29%
+
+🔄 KOTAKBANK... ⚠️  trds=24 WR=20.8% RealRet=-5.82% CompRet=-3.90% Sharpe=-1.74 DD=3.9%
+
+🔄 AXISBANK... ⚠️  trds=12 WR=33.3% RealRet=+0.20% CompRet=+2.61% Sharpe=0.42 DD=0.0%
+
+🔄 ICICIBANK... ⚠️  trds=7 WR=57.1% RealRet=-0.56% CompRet=+0.56% Sharpe=0.61 DD=0.0%
+
+🔄 SBILIFE... ⚠️  trds=16 WR=31.2% RealRet=-2.15% CompRet=-0.75% Sharpe=-0.02 DD=0.75%
+
+🔄 ULTRACEMCO... ⚠️  trds=4 WR=75.0% RealRet=+2.15% CompRet=+2.65% Sharpe=2.87 DD=0.0%
+
+🔄 GRASIM... ⚠️  trds=10 WR=40.0% RealRet=-0.40% CompRet=+1.31% Sharpe=0.38 DD=0.0%
+
+🔄 LT... ⚠️  trds=26 WR=34.6% RealRet=-4.86% CompRet=-3.13% Sharpe=-1.15 DD=3.47%
+
+🔄 TITAN... ⚠️  trds=16 WR=43.8% RealRet=+0.90% CompRet=+2.91% Sharpe=0.73 DD=0.0%
+
+🔄 SUNPHARMA... ⚠️  trds=7 WR=28.6% RealRet=+1.66% CompRet=+2.08% Sharpe=1.53 DD=0.0%
+
+========================================================================
+📊 BACKTEST SUMMARY (2023-05-13 → 2026-05-12)
+========================================================================
+
+Sym         Trds    WR%  RealRet%  CompRet%   Sharpe    DD%  QLF
+-----------------------------------------------------------------
+HINDALCO       2   50.0     +8.78     +9.53     0.00   0.00     
+BHEL          12   25.0     +6.25     +8.67     0.54   0.00     
+BAJFINANCE     9   77.8     +2.36     +6.09     1.04   0.00     
+ULTRACEMCO     4   75.0     +2.15     +2.65     2.87   0.00     
+TECHM          3   33.3     +1.70     +2.42     3.93   0.00     
+SUNPHARMA      7   28.6     +1.66     +2.08     1.53   0.00     
+TITAN         16   43.8     +0.90     +2.91     0.73   0.00     
+AXISBANK      12   33.3     +0.20     +2.61     0.42   0.00     
+GRASIM        10   40.0     -0.40     +1.31     0.38   0.00     
+ICICIBANK      7   57.1     -0.56     +0.56     0.61   0.00     
+HDFCBANK       6   50.0     -0.63     +0.58    -0.38   0.98     
+ITC           21   47.6     -1.33     +0.10    -0.60   1.59    ✅
+SBIN          21   47.6     -1.41     +0.08    -0.01   0.43    ✅
+RELIANCE      22   50.0     -1.47     -0.62    -0.27   0.62    ✅
+SBILIFE       16   31.2     -2.15     -0.75    -0.02   0.75     
+BAJAJFINSV    16   31.2     -2.50     -0.29    -0.40   0.29     
+WIPRO          9   22.2     -3.01     -1.64    -1.55   1.64     
+LT            26   34.6     -4.86     -3.13    -1.15   3.47     
+TCS           22   13.6     -5.24     -4.04    -3.19   4.04     
+KOTAKBANK     24   20.8     -5.82     -3.90    -1.74   3.90     
+HCLTECH       24   41.7     -5.90     -5.06    -1.79   5.06     
+INDUSINDBK    25   20.0     -6.37     -4.48    -2.74   4.48     
+-----------------------------------------------------------------
+AVG          314   39.7     -0.80     +0.71    -0.08   1.24    3/22
+
+🏆 BEST:  HINDALCO Real.Ret=+8.78% WR=50.0%
+💀 WORST: INDUSINDBK Real.Ret=-6.37% WR=20.0%
+Traceback (most recent call last):
+  File "/home/aryabhatta/.openclaw/plugin-skills/nifty_live_quant_ultra/backtest.py", line 511, in <module>
+    main()
+  File "/home/aryabhatta/.openclaw/plugin-skills/nifty_live_quant_ultra/backtest.py", line 504, in main
+    json.dump({'timestamp': now.isoformat(), 'start': start_date, 'end': end_date,
+  File "/usr/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "/usr/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/usr/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/usr/lib/python3.12/json/encoder.py", line 326, in _iterencode_list
+    yield from chunks
+  File "/usr/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/usr/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type bool is not JSON serializable

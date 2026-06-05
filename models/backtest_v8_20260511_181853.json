@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-11T18:18:53.619579",
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 8,
+      "wins": 5,
+      "losses": 3,
+      "win_rate": 62.5,
+      "return": 411.7,
+      "avg_win": 1.62,
+      "avg_loss": -0.5,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 8,
+      "time_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.3,
+      "qualified": false
+    }
+  ],
+  "config": {
+    "use_t1_partial": true,
+    "max_hold_days": 5,
+    "min_trades_threshold": 20,
+    "slippage_pct": 0.001,
+    "max_position_pct": 0.2,
+    "rsi_guards": true,
+    "bearish_divergence": true
+  }
+}

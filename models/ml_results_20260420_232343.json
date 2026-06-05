@@ -1,0 +1,109 @@
+{
+  "timestamp": "2026-04-20T23:23:43.227444",
+  "results": {
+    "buy": [
+      {
+        "symbol": "SBIN",
+        "price": 1107.85,
+        "entry": 1108.96,
+        "stoploss": 1074.61,
+        "target1": 1152.16,
+        "target2": 1196.48,
+        "accuracy": 41.4,
+        "signal": "HOLD"
+      },
+      {
+        "symbol": "TRENT",
+        "price": 4242.8,
+        "entry": 4247.04,
+        "stoploss": 4115.52,
+        "target1": 4412.51,
+        "target2": 4582.22,
+        "accuracy": 31.3,
+        "signal": "BUY"
+      },
+      {
+        "symbol": "BHEL",
+        "price": 325.63,
+        "entry": 325.96,
+        "stoploss": 315.86,
+        "target1": 338.66,
+        "target2": 351.68,
+        "accuracy": 36.8,
+        "signal": "SELL"
+      },
+      {
+        "symbol": "JSWSTEEL",
+        "price": 1274.5,
+        "entry": 1275.77,
+        "stoploss": 1236.27,
+        "target1": 1325.48,
+        "target2": 1376.46,
+        "accuracy": 40.8,
+        "signal": "HOLD"
+      },
+      {
+        "symbol": "RADICO",
+        "price": 3340.1,
+        "entry": 3343.44,
+        "stoploss": 3239.9,
+        "target1": 3473.7,
+        "target2": 3607.31,
+        "accuracy": 28.9,
+        "signal": "SELL"
+      }
+    ],
+    "sell": [
+      {
+        "symbol": "SBICARD",
+        "price": 675.3,
+        "entry": 674.62,
+        "stoploss": 695.56,
+        "target1": 648.29,
+        "target2": 621.28,
+        "accuracy": 31.7,
+        "signal": "HOLD"
+      },
+      {
+        "symbol": "JIOFIN",
+        "price": 237.15,
+        "entry": 236.91,
+        "stoploss": 244.26,
+        "target1": 227.66,
+        "target2": 218.18,
+        "accuracy": null,
+        "signal": "HOLD"
+      },
+      {
+        "symbol": "PIIND",
+        "price": 3037.0,
+        "entry": 3033.96,
+        "stoploss": 3128.11,
+        "target1": 2915.52,
+        "target2": 2794.04,
+        "accuracy": 38.0,
+        "signal": "SELL"
+      },
+      {
+        "symbol": "NATIONALUM",
+        "price": 426.65,
+        "entry": 426.22,
+        "stoploss": 439.45,
+        "target1": 409.58,
+        "target2": 392.52,
+        "accuracy": 26.7,
+        "signal": "HOLD"
+      },
+      {
+        "symbol": "HINDALCO",
+        "price": 1015.25,
+        "entry": 1014.23,
+        "stoploss": 1045.71,
+        "target1": 974.64,
+        "target2": 934.03,
+        "accuracy": 35.3,
+        "signal": "SELL"
+      }
+    ]
+  }
+}

@@ -1,0 +1,4408 @@
+{
+  "timestamp": "2026-05-15T21:44:16.852141",
+  "start": "2023-05-16",
+  "end": "2026-05-15",
+  "years": 3,
+  "no_sig_exit": false,
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "BHEL",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "HINDALCO",
+      "trades": 27,
+      "wins": 12,
+      "losses": 15,
+      "win_rate": 44.4,
+      "realized_return": -1.21,
+      "return": -45.22,
+      "sharpe": 1.08,
+      "tsl_exits": 5,
+      "sl_exits": 0,
+      "sig_exits": 5,
+      "time_exits": 3,
+      "abssl_exits": 6,
+      "partial_exits": 12,
+      "max_drawdown": 45.22,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.98,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2024-03-13",
+          "partial": false
+        },
+        {
+          "pnl": 9.78,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2024-04-04",
+          "partial": true
+        },
+        {
+          "pnl": 11.61,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2024-05-21",
+          "partial": true
+        },
+        {
+          "pnl": -3.79,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2024-06-04",
+          "partial": true,
+          "pullback_pct": 3.69
+        },
+        {
+          "pnl": -3.4,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2024-06-11",
+          "partial": true
+        },
+        {
+          "pnl": -2.79,
+          "type": "TIME",
+          "sector": "Steel",
+          "date": "2024-07-19",
+          "partial": true,
+          "hold_days": 36,
+          "unreal_pct": -2.7
+        },
+        {
+          "pnl": -7.18,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2024-08-05",
+          "partial": true
+        },
+        {
+          "pnl": 2.84,
+          "type": "TSL",
+          "sector": "Steel",
+          "date": "2024-09-03",
+          "partial": true
+        },
+        {
+          "pnl": 10.27,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2024-09-27",
+          "partial": true
+        },
+        {
+          "pnl": -5.18,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2024-10-24",
+          "partial": true
+        },
+        {
+          "pnl": -8.67,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2024-11-07",
+          "partial": true
+        },
+        {
+          "pnl": -3.29,
+          "type": "TIME",
+          "sector": "Steel",
+          "date": "2024-12-17",
+          "partial": true,
+          "hold_days": 22,
+          "unreal_pct": -3.19
+        },
+        {
+          "pnl": -5.07,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2025-01-27",
+          "partial": true,
+          "pullback_pct": 4.97
+        },
+        {
+          "pnl": 1.78,
+          "type": "TSL",
+          "sector": "Steel",
+          "date": "2025-02-25",
+          "partial": true
+        },
+        {
+          "pnl": -0.63,
+          "type": "TIME",
+          "sector": "Steel",
+          "date": "2025-06-03",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -0.53
+        },
+        {
+          "pnl": 3.45,
+          "type": "TSL",
+          "sector": "Steel",
+          "date": "2025-07-09",
+          "partial": true
+        },
+        {
+          "pnl": 0.58,
+          "type": "TSL",
+          "sector": "Steel",
+          "date": "2025-08-12",
+          "partial": true
+        },
+        {
+          "pnl": 8.0,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2025-09-12",
+          "partial": true
+        },
+        {
+          "pnl": 10.31,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2025-10-24",
+          "partial": true
+        },
+        {
+          "pnl": -4.41,
+          "type": "ABSSL",
+          "sector": "Steel",
+          "date": "2025-11-21",
+          "partial": true
+        },
+        {
+          "pnl": 7.73,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2025-12-12",
+          "partial": true
+        },
+        {
+          "pnl": 0.95,
+          "type": "TSL",
+          "sector": "Steel",
+          "date": "2026-02-03",
+          "partial": true
+        },
+        {
+          "pnl": -6.08,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2026-02-16",
+          "partial": true,
+          "pullback_pct": 5.98
+        },
+        {
+          "pnl": -2.94,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2026-03-13",
+          "partial": true,
+          "pullback_pct": 2.84
+        },
+        {
+          "pnl": 13.27,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2026-04-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.33,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2026-05-11",
+          "partial": true,
+          "pullback_pct": 2.23
+        },
+        {
+          "pnl": -0.72,
+          "type": "CLOSED",
+          "sector": "Steel",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "trades": 26,
+      "wins": 11,
+      "losses": 15,
+      "win_rate": 42.3,
+      "realized_return": -2.53,
+      "return": -45.23,
+      "sharpe": 0.98,
+      "tsl_exits": 5,
+      "sl_exits": 0,
+      "sig_exits": 10,
+      "time_exits": 0,
+      "abssl_exits": 5,
+      "partial_exits": 13,
+      "max_drawdown": 45.23,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 8.56,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-03-27",
+          "partial": true
+        },
+        {
+          "pnl": -7.88,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-04-26",
+          "partial": true
+        },
+        {
+          "pnl": -5.79,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-06-04",
+          "partial": true,
+          "pullback_pct": 5.69
+        },
+        {
+          "pnl": 1.0,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2024-07-22",
+          "partial": true
+        },
+        {
+          "pnl": 6.9,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-08-30",
+          "partial": true
+        },
+        {
+          "pnl": -2.16,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-10-03",
+          "partial": true,
+          "pullback_pct": 2.06
+        },
+        {
+          "pnl": -3.73,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-10-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.37,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-11-04",
+          "partial": true,
+          "pullback_pct": 2.27
+        },
+        {
+          "pnl": -3.44,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-11-11",
+          "partial": true
+        },
+        {
+          "pnl": 8.7,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-12-16",
+          "partial": true
+        },
+        {
+          "pnl": -3.65,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-01-13",
+          "partial": true,
+          "pullback_pct": 3.56
+        },
+        {
+          "pnl": 13.68,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-02-03",
+          "partial": true
+        },
+        {
+          "pnl": 3.38,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-04-01",
+          "partial": true
+        },
+        {
+          "pnl": 1.1,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-05-08",
+          "partial": true
+        },
+        {
+          "pnl": 3.19,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-06-25",
+          "partial": true
+        },
+        {
+          "pnl": -3.19,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-07-02",
+          "partial": true,
+          "pullback_pct": 3.09
+        },
+        {
+          "pnl": -2.31,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-07-25",
+          "partial": true,
+          "pullback_pct": 2.21
+        },
+        {
+          "pnl": -3.39,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-08-26",
+          "partial": true,
+          "pullback_pct": 3.29
+        },
+        {
+          "pnl": 8.53,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-09-10",
+          "partial": true
+        },
+        {
+          "pnl": 8.0,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-10-20",
+          "partial": true
+        },
+        {
+          "pnl": -5.94,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-11-11",
+          "partial": true
+        },
+        {
+          "pnl": -3.39,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-11-24",
+          "partial": true,
+          "pullback_pct": 3.29
+        },
+        {
+          "pnl": -2.84,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-12-11",
+          "partial": true,
+          "pullback_pct": 2.75
+        },
+        {
+          "pnl": -4.01,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-01-01",
+          "partial": true
+        },
+        {
+          "pnl": -2.2,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-03-04",
+          "partial": true,
+          "pullback_pct": 2.1
+        },
+        {
+          "pnl": 2.09,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2026-05-11",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "HDFCBANK",
+      "trades": 24,
+      "wins": 9,
+      "losses": 15,
+      "win_rate": 37.5,
+      "realized_return": -0.79,
+      "return": -47.88,
+      "sharpe": 0.61,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 6,
+      "time_exits": 5,
+      "abssl_exits": 4,
+      "partial_exits": 10,
+      "max_drawdown": 47.88,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 6.94,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-04-05",
+          "partial": true
+        },
+        {
+          "pnl": -4.38,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-05-09",
+          "partial": true
+        },
+        {
+          "pnl": 11.38,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-06-21",
+          "partial": true
+        },
+        {
+          "pnl": -2.71,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-08-06",
+          "partial": true,
+          "pullback_pct": 2.61
+        },
+        {
+          "pnl": 4.18,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-09-18",
+          "partial": true
+        },
+        {
+          "pnl": -0.36,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-11-13",
+          "partial": true,
+          "hold_days": 29,
+          "unreal_pct": -0.26
+        },
+        {
+          "pnl": 7.12,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-12-09",
+          "partial": true
+        },
+        {
+          "pnl": -5.07,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-01-06",
+          "partial": true
+        },
+        {
+          "pnl": 1.36,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2025-02-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.64,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-03-05",
+          "partial": true,
+          "pullback_pct": 2.54
+        },
+        {
+          "pnl": 4.98,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-03-24",
+          "partial": true
+        },
+        {
+          "pnl": 8.71,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-04-21",
+          "partial": true
+        },
+        {
+          "pnl": -2.36,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-05-20",
+          "partial": true,
+          "pullback_pct": 2.26
+        },
+        {
+          "pnl": -0.68,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-06-13",
+          "partial": true,
+          "hold_days": 23,
+          "unreal_pct": -0.58
+        },
+        {
+          "pnl": 0.52,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2025-07-18",
+          "partial": true
+        },
+        {
+          "pnl": -1.48,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-08-12",
+          "partial": true,
+          "hold_days": 22,
+          "unreal_pct": -1.38
+        },
+        {
+          "pnl": -2.17,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-08-25",
+          "partial": true,
+          "pullback_pct": 2.07
+        },
+        {
+          "pnl": -1.26,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-09-24",
+          "partial": true,
+          "hold_days": 20,
+          "unreal_pct": -1.16
+        },
+        {
+          "pnl": 1.79,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2025-11-10",
+          "partial": true
+        },
+        {
+          "pnl": -0.47,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-12-17",
+          "partial": true,
+          "hold_days": 34,
+          "unreal_pct": -0.37
+        },
+        {
+          "pnl": -3.64,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-01-06",
+          "partial": true
+        },
+        {
+          "pnl": -3.28,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-02-13",
+          "partial": true,
+          "pullback_pct": 3.18
+        },
+        {
+          "pnl": -2.73,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-16",
+          "partial": true,
+          "pullback_pct": 2.63
+        },
+        {
+          "pnl": -4.32,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-05-11",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "RELIANCE",
+      "trades": 25,
+      "wins": 8,
+      "losses": 17,
+      "win_rate": 32.0,
+      "realized_return": -4.95,
+      "return": -35.99,
+      "sharpe": -2.02,
+      "tsl_exits": 4,
+      "sl_exits": 0,
+      "sig_exits": 8,
+      "time_exits": 3,
+      "abssl_exits": 6,
+      "partial_exits": 9,
+      "max_drawdown": 36.12,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.44,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-03-11",
+          "partial": false,
+          "pullback_pct": 2.34
+        },
+        {
+          "pnl": 1.1,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2024-04-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.87,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-06-04",
+          "partial": true,
+          "pullback_pct": 2.77
+        },
+        {
+          "pnl": -2.13,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-06-24",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -2.04
+        },
+        {
+          "pnl": -3.7,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-07-22",
+          "partial": true
+        },
+        {
+          "pnl": -3.43,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-08-05",
+          "partial": true
+        },
+        {
+          "pnl": -1.94,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-09-09",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -1.84
+        },
+        {
+          "pnl": -2.11,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-10-01",
+          "partial": true,
+          "pullback_pct": 2.01
+        },
+        {
+          "pnl": -2.46,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-12-12",
+          "partial": true,
+          "pullback_pct": 2.37
+        },
+        {
+          "pnl": -2.96,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-02-12",
+          "partial": true,
+          "pullback_pct": 2.86
+        },
+        {
+          "pnl": 0.02,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-04-01",
+          "partial": true
+        },
+        {
+          "pnl": 10.02,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-04-30",
+          "partial": true
+        },
+        {
+          "pnl": 6.67,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-06-27",
+          "partial": true
+        },
+        {
+          "pnl": -3.43,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-07-21",
+          "partial": true
+        },
+        {
+          "pnl": -3.67,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-08-08",
+          "partial": true
+        },
+        {
+          "pnl": -2.21,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-09-01",
+          "partial": true,
+          "pullback_pct": 2.11
+        },
+        {
+          "pnl": 0.84,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-09-22",
+          "partial": true
+        },
+        {
+          "pnl": -1.06,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-10-09",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -0.96
+        },
+        {
+          "pnl": 6.52,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-10-20",
+          "partial": true
+        },
+        {
+          "pnl": 5.28,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-12-22",
+          "partial": true
+        },
+        {
+          "pnl": -3.5,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-01-06",
+          "partial": true,
+          "pullback_pct": 3.41
+        },
+        {
+          "pnl": 1.68,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2026-02-17",
+          "partial": true
+        },
+        {
+          "pnl": -5.15,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-02",
+          "partial": true
+        },
+        {
+          "pnl": -2.23,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-03-16",
+          "partial": true,
+          "pullback_pct": 2.13
+        },
+        {
+          "pnl": -4.88,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-27",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "TCS",
+      "trades": 27,
+      "wins": 6,
+      "losses": 21,
+      "win_rate": 22.2,
+      "realized_return": -6.29,
+      "return": -34.24,
+      "sharpe": -2.32,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 10,
+      "time_exits": 4,
+      "abssl_exits": 7,
+      "partial_exits": 7,
+      "max_drawdown": 34.24,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.39,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-03-19",
+          "partial": false,
+          "pullback_pct": 3.29
+        },
+        {
+          "pnl": -2.36,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-04-18",
+          "partial": false,
+          "pullback_pct": 2.26
+        },
+        {
+          "pnl": -0.18,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-05-23",
+          "partial": false,
+          "hold_days": 17,
+          "unreal_pct": -0.08
+        },
+        {
+          "pnl": -4.77,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-05-31",
+          "partial": false
+        },
+        {
+          "pnl": -0.55,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-06-24",
+          "partial": false,
+          "hold_days": 18,
+          "unreal_pct": -0.45
+        },
+        {
+          "pnl": 9.85,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-07-22",
+          "partial": true
+        },
+        {
+          "pnl": 0.98,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2024-09-18",
+          "partial": true
+        },
+        {
+          "pnl": -3.89,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-10-11",
+          "partial": true
+        },
+        {
+          "pnl": 9.32,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-12-05",
+          "partial": true
+        },
+        {
+          "pnl": -6.01,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-12-23",
+          "partial": true
+        },
+        {
+          "pnl": -3.72,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-01-07",
+          "partial": true
+        },
+        {
+          "pnl": -3.84,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-01-21",
+          "partial": true,
+          "pullback_pct": 3.74
+        },
+        {
+          "pnl": -2.99,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-01-28",
+          "partial": true,
+          "pullback_pct": 2.9
+        },
+        {
+          "pnl": -3.69,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-02-11",
+          "partial": true
+        },
+        {
+          "pnl": -2.94,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-04-01",
+          "partial": true,
+          "pullback_pct": 2.85
+        },
+        {
+          "pnl": -0.43,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2025-06-03",
+          "partial": true,
+          "hold_days": 41,
+          "unreal_pct": -0.33
+        },
+        {
+          "pnl": -2.2,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-06-23",
+          "partial": true,
+          "pullback_pct": 2.1
+        },
+        {
+          "pnl": -5.3,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-07-11",
+          "partial": true
+        },
+        {
+          "pnl": -2.8,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2025-09-25",
+          "partial": true,
+          "hold_days": 48,
+          "unreal_pct": -2.7
+        },
+        {
+          "pnl": -3.51,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-10-14",
+          "partial": true
+        },
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-11-04",
+          "partial": true,
+          "pullback_pct": 2.3
+        },
+        {
+          "pnl": 6.06,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-12-05",
+          "partial": true
+        },
+        {
+          "pnl": 1.72,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2026-01-02",
+          "partial": true
+        },
+        {
+          "pnl": -2.14,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-01-15",
+          "partial": true,
+          "pullback_pct": 2.04
+        },
+        {
+          "pnl": -2.82,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-01-21",
+          "partial": true,
+          "pullback_pct": 2.72
+        },
+        {
+          "pnl": -4.99,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-02-04",
+          "partial": true,
+          "pullback_pct": 4.9
+        },
+        {
+          "pnl": 2.92,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2026-04-30",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "ITC",
+      "trades": 20,
+      "wins": 4,
+      "losses": 16,
+      "win_rate": 20.0,
+      "realized_return": -5.04,
+      "return": -30.78,
+      "sharpe": -5.77,
+      "tsl_exits": 1,
+      "sl_exits": 0,
+      "sig_exits": 12,
+      "time_exits": 1,
+      "abssl_exits": 2,
+      "partial_exits": 7,
+      "max_drawdown": 30.78,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2024-03-12",
+          "partial": false,
+          "pullback_pct": 2.3
+        },
+        {
+          "pnl": -2.6,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2024-03-19",
+          "partial": false,
+          "pullback_pct": 2.5
+        },
+        {
+          "pnl": 5.05,
+          "type": "T2",
+          "sector": "FMCG",
+          "date": "2024-07-08",
+          "partial": true
+        },
+        {
+          "pnl": 5.48,
+          "type": "T2",
+          "sector": "FMCG",
+          "date": "2024-09-26",
+          "partial": true
+        },
+        {
+          "pnl": -5.29,
+          "type": "ABSSL",
+          "sector": "FMCG",
+          "date": "2024-10-09",
+          "partial": true
+        },
+        {
+          "pnl": -2.72,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2024-11-07",
+          "partial": true,
+          "pullback_pct": 2.63
+        },
+        {
+          "pnl": -2.24,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2024-12-09",
+          "partial": true,
+          "pullback_pct": 2.14
+        },
+        {
+          "pnl": -2.39,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-01-06",
+          "partial": true,
+          "pullback_pct": 2.29
+        },
+        {
+          "pnl": -2.56,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-02-10",
+          "partial": true,
+          "pullback_pct": 2.46
+        },
+        {
+          "pnl": 7.05,
+          "type": "T2",
+          "sector": "FMCG",
+          "date": "2025-05-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.11,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-05-28",
+          "partial": true,
+          "pullback_pct": 2.01
+        },
+        {
+          "pnl": -2.25,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-06-17",
+          "partial": true,
+          "pullback_pct": 2.15
+        },
+        {
+          "pnl": -2.22,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-07-22",
+          "partial": true,
+          "pullback_pct": 2.12
+        },
+        {
+          "pnl": -2.15,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2025-08-20",
+          "partial": true,
+          "pullback_pct": 2.05
+        },
+        {
+          "pnl": -2.27,
+          "type": "TIME",
+          "sector": "FMCG",
+          "date": "2025-09-23",
+          "partial": true,
+          "hold_days": 20,
+          "unreal_pct": -2.17
+        },
+        {
+          "pnl": -0.06,
+          "type": "TSL",
+          "sector": "FMCG",
+          "date": "2025-11-13",
+          "partial": true
+        },
+        {
+          "pnl": -10.69,
+          "type": "ABSSL",
+          "sector": "FMCG",
+          "date": "2026-01-01",
+          "partial": true
+        },
+        {
+          "pnl": -3.89,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2026-02-13",
+          "partial": true,
+          "pullback_pct": 3.79
+        },
+        {
+          "pnl": -2.39,
+          "type": "SIG_REVERSAL",
+          "sector": "FMCG",
+          "date": "2026-02-26",
+          "partial": true,
+          "pullback_pct": 2.29
+        },
+        {
+          "pnl": 2.11,
+          "type": "CLOSED",
+          "sector": "FMCG",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "HCLTECH",
+      "trades": 22,
+      "wins": 4,
+      "losses": 18,
+      "win_rate": 18.2,
+      "realized_return": -5.5,
+      "return": -35.29,
+      "sharpe": -1.49,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 9,
+      "time_exits": 4,
+      "abssl_exits": 5,
+      "partial_exits": 7,
+      "max_drawdown": 35.29,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -4.71,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-03-22",
+          "partial": false
+        },
+        {
+          "pnl": -4.59,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-04-16",
+          "partial": false
+        },
+        {
+          "pnl": -6.05,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-04-29",
+          "partial": false
+        },
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-06-04",
+          "partial": false,
+          "pullback_pct": 2.3
+        },
+        {
+          "pnl": 10.88,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-09-02",
+          "partial": true
+        },
+        {
+          "pnl": -0.47,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-10-31",
+          "partial": true,
+          "hold_days": 36,
+          "unreal_pct": -0.37
+        },
+        {
+          "pnl": 6.88,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-12-13",
+          "partial": true
+        },
+        {
+          "pnl": -6.17,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-01-14",
+          "partial": true,
+          "pullback_pct": 6.08
+        },
+        {
+          "pnl": -6.52,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-01-27",
+          "partial": true
+        },
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-02-20",
+          "partial": true,
+          "pullback_pct": 2.31
+        },
+        {
+          "pnl": -4.39,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-02-28",
+          "partial": true
+        },
+        {
+          "pnl": -2.59,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-04-01",
+          "partial": true,
+          "pullback_pct": 2.49
+        },
+        {
+          "pnl": 9.05,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-06-11",
+          "partial": true
+        },
+        {
+          "pnl": -1.45,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2025-07-09",
+          "partial": true,
+          "hold_days": 26,
+          "unreal_pct": -1.36
+        },
+        {
+          "pnl": -2.38,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-08-22",
+          "partial": true,
+          "pullback_pct": 2.29
+        },
+        {
+          "pnl": -2.58,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-09-01",
+          "partial": true,
+          "pullback_pct": 2.48
+        },
+        {
+          "pnl": -3.0,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-09-22",
+          "partial": true,
+          "pullback_pct": 2.91
+        },
+        {
+          "pnl": 8.82,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-11-21",
+          "partial": true
+        },
+        {
+          "pnl": -0.49,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2025-12-29",
+          "partial": true,
+          "hold_days": 27,
+          "unreal_pct": -0.39
+        },
+        {
+          "pnl": -2.77,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2026-02-06",
+          "partial": true,
+          "hold_days": 30,
+          "unreal_pct": -2.67
+        },
+        {
+          "pnl": -2.92,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-03-17",
+          "partial": true,
+          "pullback_pct": 2.82
+        },
+        {
+          "pnl": -3.82,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-04-22",
+          "partial": true,
+          "pullback_pct": 3.73
+        }
+      ]
+    },
+    {
+      "symbol": "WIPRO",
+      "trades": 30,
+      "wins": 9,
+      "losses": 21,
+      "win_rate": 30.0,
+      "realized_return": -6.71,
+      "return": -37.64,
+      "sharpe": -2.47,
+      "tsl_exits": 5,
+      "sl_exits": 0,
+      "sig_exits": 6,
+      "time_exits": 3,
+      "abssl_exits": 12,
+      "partial_exits": 9,
+      "max_drawdown": 37.64,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.33,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-03-19",
+          "partial": false
+        },
+        {
+          "pnl": -4.31,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-03-26",
+          "partial": false
+        },
+        {
+          "pnl": -5.13,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-04-15",
+          "partial": false
+        },
+        {
+          "pnl": -2.16,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-05-13",
+          "partial": false,
+          "hold_days": 18,
+          "unreal_pct": -2.06
+        },
+        {
+          "pnl": -2.78,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-05-27",
+          "partial": false,
+          "pullback_pct": 2.68
+        },
+        {
+          "pnl": 11.46,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-06-28",
+          "partial": true
+        },
+        {
+          "pnl": -3.3,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-08-05",
+          "partial": true
+        },
+        {
+          "pnl": 0.36,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2024-09-04",
+          "partial": true
+        },
+        {
+          "pnl": -2.2,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-09-11",
+          "partial": true,
+          "pullback_pct": 2.1
+        },
+        {
+          "pnl": -0.78,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-10-08",
+          "partial": true,
+          "hold_days": 26,
+          "unreal_pct": -0.68
+        },
+        {
+          "pnl": -3.21,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-10-15",
+          "partial": true
+        },
+        {
+          "pnl": 1.42,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2024-11-04",
+          "partial": true
+        },
+        {
+          "pnl": 9.47,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-12-11",
+          "partial": true
+        },
+        {
+          "pnl": -4.44,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-01-17",
+          "partial": true
+        },
+        {
+          "pnl": 0.02,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2025-02-24",
+          "partial": true
+        },
+        {
+          "pnl": -3.2,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-04-03",
+          "partial": true
+        },
+        {
+          "pnl": -4.53,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-04-17",
+          "partial": true
+        },
+        {
+          "pnl": 3.05,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2025-06-03",
+          "partial": true
+        },
+        {
+          "pnl": 7.25,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-07-04",
+          "partial": true
+        },
+        {
+          "pnl": -5.25,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-07-14",
+          "partial": true
+        },
+        {
+          "pnl": -2.27,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-07-23",
+          "partial": true,
+          "pullback_pct": 2.18
+        },
+        {
+          "pnl": -2.54,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-09-04",
+          "partial": true,
+          "pullback_pct": 2.44
+        },
+        {
+          "pnl": -2.31,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-09-22",
+          "partial": true,
+          "pullback_pct": 2.22
+        },
+        {
+          "pnl": -3.33,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-10-17",
+          "partial": true,
+          "pullback_pct": 3.23
+        },
+        {
+          "pnl": 5.78,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-12-05",
+          "partial": true
+        },
+        {
+          "pnl": -1.4,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2026-01-12",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -1.3
+        },
+        {
+          "pnl": -8.22,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2026-01-19",
+          "partial": true
+        },
+        {
+          "pnl": -3.26,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2026-02-09",
+          "partial": true
+        },
+        {
+          "pnl": -3.71,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2026-03-16",
+          "partial": true
+        },
+        {
+          "pnl": 3.22,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2026-04-28",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "TECHM",
+      "trades": 24,
+      "wins": 8,
+      "losses": 16,
+      "win_rate": 33.3,
+      "realized_return": -0.86,
+      "return": -45.93,
+      "sharpe": 1.69,
+      "tsl_exits": 1,
+      "sl_exits": 0,
+      "sig_exits": 9,
+      "time_exits": 3,
+      "abssl_exits": 4,
+      "partial_exits": 11,
+      "max_drawdown": 45.93,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.37,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2024-03-19",
+          "partial": false
+        },
+        {
+          "pnl": -3.1,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-04-12",
+          "partial": false,
+          "pullback_pct": 3.0
+        },
+        {
+          "pnl": 9.45,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-05-17",
+          "partial": true
+        },
+        {
+          "pnl": -3.02,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-05-29",
+          "partial": true,
+          "pullback_pct": 2.93
+        },
+        {
+          "pnl": 11.52,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-07-01",
+          "partial": true
+        },
+        {
+          "pnl": -2.45,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2024-08-07",
+          "partial": true,
+          "pullback_pct": 2.36
+        },
+        {
+          "pnl": 8.22,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2024-08-26",
+          "partial": true
+        },
+        {
+          "pnl": -1.2,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-09-26",
+          "partial": true,
+          "hold_days": 20,
+          "unreal_pct": -1.1
+        },
+        {
+          "pnl": -0.65,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-11-01",
+          "partial": true,
+          "hold_days": 31,
+          "unreal_pct": -0.55
+        },
+        {
+          "pnl": -0.64,
+          "type": "TIME",
+          "sector": "IT",
+          "date": "2024-12-20",
+          "partial": true,
+          "hold_days": 44,
+          "unreal_pct": -0.54
+        },
+        {
+          "pnl": -3.15,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-01-03",
+          "partial": true
+        },
+        {
+          "pnl": -2.43,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-02-01",
+          "partial": true,
+          "pullback_pct": 2.33
+        },
+        {
+          "pnl": -2.22,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-02-20",
+          "partial": true,
+          "pullback_pct": 2.12
+        },
+        {
+          "pnl": -4.34,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-04-01",
+          "partial": true
+        },
+        {
+          "pnl": 13.76,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-05-22",
+          "partial": true
+        },
+        {
+          "pnl": 2.44,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2025-07-07",
+          "partial": true
+        },
+        {
+          "pnl": -3.54,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2025-07-18",
+          "partial": true
+        },
+        {
+          "pnl": -2.42,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-09-24",
+          "partial": true,
+          "pullback_pct": 2.32
+        },
+        {
+          "pnl": -2.1,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-11-03",
+          "partial": true,
+          "pullback_pct": 2.0
+        },
+        {
+          "pnl": -2.54,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2025-11-18",
+          "partial": true,
+          "pullback_pct": 2.44
+        },
+        {
+          "pnl": 7.09,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2025-12-04",
+          "partial": true
+        },
+        {
+          "pnl": 8.95,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2026-01-28",
+          "partial": true
+        },
+        {
+          "pnl": 11.75,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2026-04-17",
+          "partial": true
+        },
+        {
+          "pnl": -5.66,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-05-12",
+          "partial": true,
+          "pullback_pct": 5.56
+        }
+      ]
+    },
+    {
+      "symbol": "INDUSINDBK",
+      "trades": 26,
+      "wins": 7,
+      "losses": 19,
+      "win_rate": 26.9,
+      "realized_return": -4.51,
+      "return": -43.25,
+      "sharpe": 0.79,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 7,
+      "time_exits": 5,
+      "abssl_exits": 6,
+      "partial_exits": 7,
+      "max_drawdown": 43.25,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -4.11,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-03-18",
+          "partial": false,
+          "pullback_pct": 4.01
+        },
+        {
+          "pnl": -2.69,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-04-18",
+          "partial": false,
+          "hold_days": 27,
+          "unreal_pct": -2.59
+        },
+        {
+          "pnl": -3.52,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-04-26",
+          "partial": false
+        },
+        {
+          "pnl": -3.2,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-05-08",
+          "partial": false,
+          "pullback_pct": 3.11
+        },
+        {
+          "pnl": 8.37,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-06-03",
+          "partial": true
+        },
+        {
+          "pnl": -0.9,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-06-24",
+          "partial": true,
+          "hold_days": 19,
+          "unreal_pct": -0.8
+        },
+        {
+          "pnl": -3.7,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-07-02",
+          "partial": true
+        },
+        {
+          "pnl": -3.19,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-07-23",
+          "partial": true,
+          "pullback_pct": 3.1
+        },
+        {
+          "pnl": 6.95,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-09-20",
+          "partial": true
+        },
+        {
+          "pnl": -3.97,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-10-01",
+          "partial": true,
+          "pullback_pct": 3.88
+        },
+        {
+          "pnl": -1.72,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-12-13",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.63
+        },
+        {
+          "pnl": -5.61,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-01-10",
+          "partial": true,
+          "pullback_pct": 5.52
+        },
+        {
+          "pnl": -4.75,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-01-27",
+          "partial": true
+        },
+        {
+          "pnl": -5.6,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-02-28",
+          "partial": true
+        },
+        {
+          "pnl": 16.15,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-05-02",
+          "partial": true
+        },
+        {
+          "pnl": 10.87,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-06-30",
+          "partial": true
+        },
+        {
+          "pnl": -2.17,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-07-09",
+          "partial": true,
+          "pullback_pct": 2.07
+        },
+        {
+          "pnl": -2.73,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-07-22",
+          "partial": true,
+          "pullback_pct": 2.63
+        },
+        {
+          "pnl": -5.82,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-09-26",
+          "partial": true
+        },
+        {
+          "pnl": 10.94,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-11-11",
+          "partial": true
+        },
+        {
+          "pnl": 8.59,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-01-02",
+          "partial": true
+        },
+        {
+          "pnl": -0.37,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2026-02-06",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.27
+        },
+        {
+          "pnl": -0.24,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2026-03-04",
+          "partial": true,
+          "hold_days": 23,
+          "unreal_pct": -0.14
+        },
+        {
+          "pnl": -5.11,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-23",
+          "partial": true
+        },
+        {
+          "pnl": 16.07,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-04-29",
+          "partial": true
+        },
+        {
+          "pnl": -0.92,
+          "type": "CLOSED",
+          "sector": "Banking",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "BAJAJFINSV",
+      "trades": 30,
+      "wins": 9,
+      "losses": 21,
+      "win_rate": 30.0,
+      "realized_return": -3.17,
+      "return": -41.24,
+      "sharpe": -0.32,
+      "tsl_exits": 4,
+      "sl_exits": 0,
+      "sig_exits": 8,
+      "time_exits": 7,
+      "abssl_exits": 6,
+      "partial_exits": 9,
+      "max_drawdown": 41.24,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -1.21,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-03-27",
+          "partial": false,
+          "hold_days": 16,
+          "unreal_pct": -1.11
+        },
+        {
+          "pnl": -0.39,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-05-02",
+          "partial": false,
+          "hold_days": 16,
+          "unreal_pct": -0.29
+        },
+        {
+          "pnl": -4.05,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-05-09",
+          "partial": false,
+          "pullback_pct": 3.95
+        },
+        {
+          "pnl": -4.7,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-05-30",
+          "partial": false
+        },
+        {
+          "pnl": 0.1,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2024-08-07",
+          "partial": true
+        },
+        {
+          "pnl": 9.37,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-08-29",
+          "partial": true
+        },
+        {
+          "pnl": -3.68,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-10-08",
+          "partial": true,
+          "pullback_pct": 3.59
+        },
+        {
+          "pnl": -5.34,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-10-21",
+          "partial": true
+        },
+        {
+          "pnl": -3.26,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-11-04",
+          "partial": true
+        },
+        {
+          "pnl": 1.72,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2024-12-18",
+          "partial": true
+        },
+        {
+          "pnl": 10.35,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-01-22",
+          "partial": true
+        },
+        {
+          "pnl": 10.05,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-02-27",
+          "partial": true
+        },
+        {
+          "pnl": -3.96,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-03-05",
+          "partial": true,
+          "pullback_pct": 3.86
+        },
+        {
+          "pnl": 4.76,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-04-01",
+          "partial": true
+        },
+        {
+          "pnl": 10.38,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-04-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-05-20",
+          "partial": true,
+          "pullback_pct": 2.31
+        },
+        {
+          "pnl": -2.39,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-06-03",
+          "partial": true,
+          "pullback_pct": 2.29
+        },
+        {
+          "pnl": -2.66,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-06-19",
+          "partial": true,
+          "pullback_pct": 2.57
+        },
+        {
+          "pnl": -1.97,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-07-29",
+          "partial": true,
+          "hold_days": 35,
+          "unreal_pct": -1.87
+        },
+        {
+          "pnl": -3.67,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-08-26",
+          "partial": true,
+          "pullback_pct": 3.57
+        },
+        {
+          "pnl": 6.21,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2025-09-12",
+          "partial": true
+        },
+        {
+          "pnl": -0.95,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-10-13",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.85
+        },
+        {
+          "pnl": 1.26,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-10-30",
+          "partial": true
+        },
+        {
+          "pnl": -5.55,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-11-11",
+          "partial": true
+        },
+        {
+          "pnl": -0.19,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-12-02",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.1
+        },
+        {
+          "pnl": -3.12,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-12-16",
+          "partial": true
+        },
+        {
+          "pnl": -1.21,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2026-01-19",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -1.11
+        },
+        {
+          "pnl": -3.71,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2026-03-02",
+          "partial": true,
+          "hold_days": 27,
+          "unreal_pct": -3.61
+        },
+        {
+          "pnl": -2.29,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-04-30",
+          "partial": true,
+          "pullback_pct": 2.19
+        },
+        {
+          "pnl": -3.85,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-05-13",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "trades": 27,
+      "wins": 10,
+      "losses": 17,
+      "win_rate": 37.0,
+      "realized_return": -1.95,
+      "return": -48.22,
+      "sharpe": 0.46,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 10,
+      "time_exits": 4,
+      "abssl_exits": 3,
+      "partial_exits": 10,
+      "max_drawdown": 48.22,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.43,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-03-12",
+          "partial": false,
+          "pullback_pct": 2.34
+        },
+        {
+          "pnl": 6.34,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-04-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.28,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-06-14",
+          "partial": true,
+          "pullback_pct": 2.18
+        },
+        {
+          "pnl": 1.47,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2024-07-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.1,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-08-13",
+          "partial": true,
+          "pullback_pct": 2.0
+        },
+        {
+          "pnl": -2.49,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-09-06",
+          "partial": true,
+          "pullback_pct": 2.4
+        },
+        {
+          "pnl": 6.18,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-09-20",
+          "partial": true
+        },
+        {
+          "pnl": -4.82,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-10-21",
+          "partial": true,
+          "pullback_pct": 4.73
+        },
+        {
+          "pnl": -4.43,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-11-13",
+          "partial": true
+        },
+        {
+          "pnl": 0.01,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2024-12-30",
+          "partial": true
+        },
+        {
+          "pnl": -2.86,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-01-13",
+          "partial": true,
+          "pullback_pct": 2.77
+        },
+        {
+          "pnl": 7.59,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-02-07",
+          "partial": true
+        },
+        {
+          "pnl": -0.84,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-02-27",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.74
+        },
+        {
+          "pnl": 9.55,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-03-24",
+          "partial": true
+        },
+        {
+          "pnl": -0.58,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-05-09",
+          "partial": true,
+          "hold_days": 28,
+          "unreal_pct": -0.48
+        },
+        {
+          "pnl": -3.63,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-05-21",
+          "partial": true
+        },
+        {
+          "pnl": 1.52,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2025-06-30",
+          "partial": true
+        },
+        {
+          "pnl": -2.78,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-07-25",
+          "partial": true,
+          "pullback_pct": 2.69
+        },
+        {
+          "pnl": -0.64,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-08-25",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.54
+        },
+        {
+          "pnl": 8.38,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-10-08",
+          "partial": true
+        },
+        {
+          "pnl": -2.62,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-11-04",
+          "partial": true,
+          "pullback_pct": 2.52
+        },
+        {
+          "pnl": 6.43,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-01-01",
+          "partial": true
+        },
+        {
+          "pnl": -2.52,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-01-07",
+          "partial": true,
+          "pullback_pct": 2.43
+        },
+        {
+          "pnl": -3.25,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-01-27",
+          "partial": true
+        },
+        {
+          "pnl": -1.89,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2026-02-27",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -1.79
+        },
+        {
+          "pnl": -2.76,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-23",
+          "partial": true,
+          "pullback_pct": 2.66
+        },
+        {
+          "pnl": 1.37,
+          "type": "CLOSED",
+          "sector": "Banking",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "AXISBANK",
+      "trades": 26,
+      "wins": 10,
+      "losses": 16,
+      "win_rate": 38.5,
+      "realized_return": -0.85,
+      "return": -55.81,
+      "sharpe": 1.09,
+      "tsl_exits": 2,
+      "sl_exits": 0,
+      "sig_exits": 2,
+      "time_exits": 6,
+      "abssl_exits": 8,
+      "partial_exits": 11,
+      "max_drawdown": 55.81,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -4.06,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-03-14",
+          "partial": false
+        },
+        {
+          "pnl": -0.29,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-04-16",
+          "partial": false,
+          "hold_days": 20,
+          "unreal_pct": -0.19
+        },
+        {
+          "pnl": 8.81,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-04-29",
+          "partial": true
+        },
+        {
+          "pnl": 11.38,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-06-25",
+          "partial": true
+        },
+        {
+          "pnl": -3.32,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-07-23",
+          "partial": true,
+          "pullback_pct": 3.22
+        },
+        {
+          "pnl": -5.3,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-07-25",
+          "partial": true
+        },
+        {
+          "pnl": 5.99,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-09-18",
+          "partial": true
+        },
+        {
+          "pnl": -2.35,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-11-04",
+          "partial": true,
+          "pullback_pct": 2.25
+        },
+        {
+          "pnl": -4.02,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2024-11-18",
+          "partial": true
+        },
+        {
+          "pnl": -0.63,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-12-16",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -0.53
+        },
+        {
+          "pnl": -0.82,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-02-21",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.72
+        },
+        {
+          "pnl": 8.58,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-03-24",
+          "partial": true
+        },
+        {
+          "pnl": 8.41,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-05-16",
+          "partial": true
+        },
+        {
+          "pnl": -3.43,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-06-05",
+          "partial": true
+        },
+        {
+          "pnl": -1.98,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-07-01",
+          "partial": true,
+          "hold_days": 25,
+          "unreal_pct": -1.88
+        },
+        {
+          "pnl": -5.9,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-07-18",
+          "partial": true
+        },
+        {
+          "pnl": -0.77,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-08-25",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.68
+        },
+        {
+          "pnl": 5.54,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-09-12",
+          "partial": true
+        },
+        {
+          "pnl": 4.74,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-11-13",
+          "partial": true
+        },
+        {
+          "pnl": 1.12,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2025-12-02",
+          "partial": true
+        },
+        {
+          "pnl": -4.6,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-12-16",
+          "partial": true
+        },
+        {
+          "pnl": 3.11,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2026-02-02",
+          "partial": true
+        },
+        {
+          "pnl": -3.96,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2026-03-09",
+          "partial": true,
+          "hold_days": 33,
+          "unreal_pct": -3.86
+        },
+        {
+          "pnl": -3.73,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-30",
+          "partial": true
+        },
+        {
+          "pnl": 12.99,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-04-10",
+          "partial": true
+        },
+        {
+          "pnl": -3.14,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-05-14",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "ICICIBANK",
+      "trades": 24,
+      "wins": 9,
+      "losses": 15,
+      "win_rate": 37.5,
+      "realized_return": -1.38,
+      "return": -44.0,
+      "sharpe": 0.63,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 4,
+      "time_exits": 9,
+      "abssl_exits": 2,
+      "partial_exits": 10,
+      "max_drawdown": 44.18,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.79,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-04-18",
+          "partial": false,
+          "hold_days": 35,
+          "unreal_pct": -2.7
+        },
+        {
+          "pnl": 2.8,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2024-05-08",
+          "partial": true
+        },
+        {
+          "pnl": -2.18,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-05-29",
+          "partial": true,
+          "pullback_pct": 2.09
+        },
+        {
+          "pnl": 7.99,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-06-28",
+          "partial": true
+        },
+        {
+          "pnl": -1.45,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2024-08-12",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -1.35
+        },
+        {
+          "pnl": 6.58,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2024-09-03",
+          "partial": true
+        },
+        {
+          "pnl": 1.53,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2024-11-04",
+          "partial": true
+        },
+        {
+          "pnl": -2.15,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2024-11-13",
+          "partial": true,
+          "pullback_pct": 2.05
+        },
+        {
+          "pnl": 1.31,
+          "type": "TSL",
+          "sector": "Banking",
+          "date": "2024-12-26",
+          "partial": true
+        },
+        {
+          "pnl": -3.65,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-01-10",
+          "partial": true
+        },
+        {
+          "pnl": -3.18,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2025-01-21",
+          "partial": true
+        },
+        {
+          "pnl": -2.48,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-02-24",
+          "partial": true,
+          "hold_days": 27,
+          "unreal_pct": -2.39
+        },
+        {
+          "pnl": 5.23,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-03-19",
+          "partial": true
+        },
+        {
+          "pnl": 7.07,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-05-12",
+          "partial": true
+        },
+        {
+          "pnl": -1.21,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-06-13",
+          "partial": true,
+          "hold_days": 31,
+          "unreal_pct": -1.11
+        },
+        {
+          "pnl": -0.79,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-07-17",
+          "partial": true,
+          "hold_days": 27,
+          "unreal_pct": -0.69
+        },
+        {
+          "pnl": -2.82,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-09-03",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -2.72
+        },
+        {
+          "pnl": -2.18,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-09-25",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -2.09
+        },
+        {
+          "pnl": 5.16,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2025-10-17",
+          "partial": true
+        },
+        {
+          "pnl": -2.22,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2025-11-25",
+          "partial": true,
+          "pullback_pct": 2.13
+        },
+        {
+          "pnl": -1.38,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2025-12-18",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.28
+        },
+        {
+          "pnl": 4.42,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-01-08",
+          "partial": true
+        },
+        {
+          "pnl": -0.89,
+          "type": "TIME",
+          "sector": "Banking",
+          "date": "2026-03-02",
+          "partial": true,
+          "hold_days": 32,
+          "unreal_pct": -0.79
+        },
+        {
+          "pnl": -2.35,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-29",
+          "partial": true,
+          "pullback_pct": 2.25
+        }
+      ]
+    },
+    {
+      "symbol": "SBILIFE",
+      "trades": 26,
+      "wins": 6,
+      "losses": 20,
+      "win_rate": 23.1,
+      "realized_return": -4.82,
+      "return": -32.06,
+      "sharpe": -0.88,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 11,
+      "time_exits": 5,
+      "abssl_exits": 3,
+      "partial_exits": 7,
+      "max_drawdown": 32.06,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.27,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2024-03-19",
+          "partial": false
+        },
+        {
+          "pnl": -2.63,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-04-04",
+          "partial": false,
+          "pullback_pct": 2.53
+        },
+        {
+          "pnl": -3.61,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-04-15",
+          "partial": false,
+          "pullback_pct": 3.51
+        },
+        {
+          "pnl": -2.53,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-05-08",
+          "partial": false,
+          "pullback_pct": 2.44
+        },
+        {
+          "pnl": -3.09,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-05-27",
+          "partial": false,
+          "pullback_pct": 2.99
+        },
+        {
+          "pnl": -4.28,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-06-03",
+          "partial": false,
+          "pullback_pct": 4.18
+        },
+        {
+          "pnl": 7.82,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2024-07-10",
+          "partial": true
+        },
+        {
+          "pnl": 9.6,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2024-08-27",
+          "partial": true
+        },
+        {
+          "pnl": -2.12,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-10-01",
+          "partial": true,
+          "pullback_pct": 2.03
+        },
+        {
+          "pnl": -4.05,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2024-11-13",
+          "partial": true
+        },
+        {
+          "pnl": -2.56,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-12-18",
+          "partial": true,
+          "pullback_pct": 2.46
+        },
+        {
+          "pnl": -2.58,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-02-10",
+          "partial": true,
+          "pullback_pct": 2.48
+        },
+        {
+          "pnl": -3.29,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-02-28",
+          "partial": true,
+          "pullback_pct": 3.19
+        },
+        {
+          "pnl": 1.66,
+          "type": "TSL",
+          "sector": "Pharma",
+          "date": "2025-04-04",
+          "partial": true
+        },
+        {
+          "pnl": 12.78,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2025-04-30",
+          "partial": true
+        },
+        {
+          "pnl": -0.64,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2025-06-09",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.54
+        },
+        {
+          "pnl": 0.77,
+          "type": "TSL",
+          "sector": "Pharma",
+          "date": "2025-07-17",
+          "partial": true
+        },
+        {
+          "pnl": -1.04,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2025-08-26",
+          "partial": true,
+          "hold_days": 32,
+          "unreal_pct": -0.95
+        },
+        {
+          "pnl": -2.1,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-09-26",
+          "partial": true,
+          "pullback_pct": 2.0
+        },
+        {
+          "pnl": 8.66,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2025-10-29",
+          "partial": true
+        },
+        {
+          "pnl": -0.12,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2025-12-24",
+          "partial": true,
+          "hold_days": 19,
+          "unreal_pct": -0.02
+        },
+        {
+          "pnl": -0.06,
+          "type": "TSL",
+          "sector": "Pharma",
+          "date": "2026-01-22",
+          "partial": true
+        },
+        {
+          "pnl": -1.12,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2026-02-13",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.02
+        },
+        {
+          "pnl": -5.66,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2026-03-04",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -5.57
+        },
+        {
+          "pnl": -5.67,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2026-03-23",
+          "partial": true
+        },
+        {
+          "pnl": -4.36,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2026-04-23",
+          "partial": true,
+          "pullback_pct": 4.26
+        }
+      ]
+    },
+    {
+      "symbol": "ULTRACEMCO",
+      "trades": 28,
+      "wins": 10,
+      "losses": 18,
+      "win_rate": 35.7,
+      "realized_return": -1.75,
+      "return": -36.68,
+      "sharpe": -0.76,
+      "tsl_exits": 7,
+      "sl_exits": 0,
+      "sig_exits": 7,
+      "time_exits": 4,
+      "abssl_exits": 7,
+      "partial_exits": 12,
+      "max_drawdown": 37.68,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 1.31,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2024-04-09",
+          "partial": true
+        },
+        {
+          "pnl": 1.13,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2024-05-14",
+          "partial": true
+        },
+        {
+          "pnl": 1.44,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2024-05-30",
+          "partial": true
+        },
+        {
+          "pnl": 12.43,
+          "type": "T2",
+          "sector": "Materials",
+          "date": "2024-06-13",
+          "partial": true
+        },
+        {
+          "pnl": -3.53,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2024-07-19",
+          "partial": true
+        },
+        {
+          "pnl": -2.6,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2024-08-06",
+          "partial": true,
+          "pullback_pct": 2.5
+        },
+        {
+          "pnl": -0.9,
+          "type": "TIME",
+          "sector": "Materials",
+          "date": "2024-10-07",
+          "partial": true,
+          "hold_days": 46,
+          "unreal_pct": -0.8
+        },
+        {
+          "pnl": -3.97,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2024-11-13",
+          "partial": true,
+          "pullback_pct": 3.87
+        },
+        {
+          "pnl": -3.51,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2024-11-28",
+          "partial": true
+        },
+        {
+          "pnl": 2.21,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2024-12-23",
+          "partial": true
+        },
+        {
+          "pnl": -5.27,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2025-01-10",
+          "partial": true
+        },
+        {
+          "pnl": 3.73,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2025-02-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.85,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2025-04-30",
+          "partial": true,
+          "pullback_pct": 2.76
+        },
+        {
+          "pnl": -4.17,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2025-05-27",
+          "partial": true,
+          "pullback_pct": 4.07
+        },
+        {
+          "pnl": 8.25,
+          "type": "T2",
+          "sector": "Materials",
+          "date": "2025-06-27",
+          "partial": true
+        },
+        {
+          "pnl": -1.01,
+          "type": "TIME",
+          "sector": "Materials",
+          "date": "2025-08-07",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -0.91
+        },
+        {
+          "pnl": 2.79,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2025-08-28",
+          "partial": true
+        },
+        {
+          "pnl": -2.54,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2025-09-15",
+          "partial": true,
+          "pullback_pct": 2.44
+        },
+        {
+          "pnl": -3.67,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2025-09-25",
+          "partial": true
+        },
+        {
+          "pnl": -2.28,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2025-10-24",
+          "partial": true,
+          "pullback_pct": 2.18
+        },
+        {
+          "pnl": -2.74,
+          "type": "SIG_REVERSAL",
+          "sector": "Materials",
+          "date": "2025-11-27",
+          "partial": true,
+          "pullback_pct": 2.65
+        },
+        {
+          "pnl": -3.15,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2025-12-10",
+          "partial": true
+        },
+        {
+          "pnl": -0.35,
+          "type": "TIME",
+          "sector": "Materials",
+          "date": "2025-12-30",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.25
+        },
+        {
+          "pnl": 0.12,
+          "type": "TSL",
+          "sector": "Materials",
+          "date": "2026-01-09",
+          "partial": true
+        },
+        {
+          "pnl": 7.83,
+          "type": "T2",
+          "sector": "Materials",
+          "date": "2026-02-12",
+          "partial": true
+        },
+        {
+          "pnl": -3.76,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2026-03-02",
+          "partial": true
+        },
+        {
+          "pnl": -5.42,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2026-03-23",
+          "partial": true
+        },
+        {
+          "pnl": -0.95,
+          "type": "TIME",
+          "sector": "Materials",
+          "date": "2026-05-12",
+          "partial": true,
+          "hold_days": 34,
+          "unreal_pct": -0.85
+        }
+      ]
+    },
+    {
+      "symbol": "GRASIM",
+      "trades": 29,
+      "wins": 8,
+      "losses": 21,
+      "win_rate": 27.6,
+      "realized_return": -5.72,
+      "return": -23.56,
+      "sharpe": -1.33,
+      "tsl_exits": 5,
+      "sl_exits": 0,
+      "sig_exits": 4,
+      "time_exits": 7,
+      "abssl_exits": 10,
+      "partial_exits": 9,
+      "max_drawdown": 23.56,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 8.31,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-04-23",
+          "partial": true
+        },
+        {
+          "pnl": 1.49,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2024-05-08",
+          "partial": true
+        },
+        {
+          "pnl": -2.57,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-05-31",
+          "partial": true,
+          "pullback_pct": 2.47
+        },
+        {
+          "pnl": 11.88,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2024-07-02",
+          "partial": true
+        },
+        {
+          "pnl": -3.76,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-08-02",
+          "partial": true
+        },
+        {
+          "pnl": -3.38,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-08-13",
+          "partial": true
+        },
+        {
+          "pnl": -0.34,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-09-11",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -0.24
+        },
+        {
+          "pnl": -3.05,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2024-09-20",
+          "partial": true,
+          "pullback_pct": 2.96
+        },
+        {
+          "pnl": -0.89,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-10-14",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.79
+        },
+        {
+          "pnl": -4.02,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2024-10-22",
+          "partial": true
+        },
+        {
+          "pnl": -2.02,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2024-12-20",
+          "partial": true,
+          "hold_days": 29,
+          "unreal_pct": -1.92
+        },
+        {
+          "pnl": -3.47,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-01-06",
+          "partial": true
+        },
+        {
+          "pnl": -4.37,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-01-10",
+          "partial": true
+        },
+        {
+          "pnl": -2.22,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-01-28",
+          "partial": true,
+          "pullback_pct": 2.12
+        },
+        {
+          "pnl": -4.12,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-02-24",
+          "partial": true
+        },
+        {
+          "pnl": -2.09,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-05-09",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.99
+        },
+        {
+          "pnl": -3.17,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2025-05-20",
+          "partial": true
+        },
+        {
+          "pnl": 2.42,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-07-07",
+          "partial": true
+        },
+        {
+          "pnl": -1.12,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-07-30",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.03
+        },
+        {
+          "pnl": -2.19,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2025-08-08",
+          "partial": true,
+          "pullback_pct": 2.09
+        },
+        {
+          "pnl": 1.09,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-08-28",
+          "partial": true
+        },
+        {
+          "pnl": -0.29,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2025-09-24",
+          "partial": true,
+          "hold_days": 20,
+          "unreal_pct": -0.19
+        },
+        {
+          "pnl": 3.04,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2025-11-04",
+          "partial": true
+        },
+        {
+          "pnl": 0.79,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2026-01-13",
+          "partial": true
+        },
+        {
+          "pnl": -3.61,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-01-20",
+          "partial": true
+        },
+        {
+          "pnl": -2.17,
+          "type": "TIME",
+          "sector": "Diversified",
+          "date": "2026-02-27",
+          "partial": true,
+          "hold_days": 31,
+          "unreal_pct": -2.07
+        },
+        {
+          "pnl": -6.29,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-13",
+          "partial": true
+        },
+        {
+          "pnl": -3.45,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-23",
+          "partial": true
+        },
+        {
+          "pnl": 7.22,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2026-05-06",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "LT",
+      "trades": 28,
+      "wins": 10,
+      "losses": 18,
+      "win_rate": 35.7,
+      "realized_return": -2.72,
+      "return": -50.82,
+      "sharpe": 0.7,
+      "tsl_exits": 3,
+      "sl_exits": 0,
+      "sig_exits": 4,
+      "time_exits": 7,
+      "abssl_exits": 7,
+      "partial_exits": 10,
+      "max_drawdown": 51.17,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 3.14,
+          "type": "TSL",
+          "sector": "CapitalGoods",
+          "date": "2024-04-12",
+          "partial": true
+        },
+        {
+          "pnl": -3.25,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2024-05-03",
+          "partial": true
+        },
+        {
+          "pnl": 12.39,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2024-06-03",
+          "partial": true
+        },
+        {
+          "pnl": -0.82,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2024-06-28",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.72
+        },
+        {
+          "pnl": -0.42,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2024-07-19",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -0.32
+        },
+        {
+          "pnl": 1.08,
+          "type": "TSL",
+          "sector": "CapitalGoods",
+          "date": "2024-08-02",
+          "partial": true
+        },
+        {
+          "pnl": -3.29,
+          "type": "SIG_REVERSAL",
+          "sector": "CapitalGoods",
+          "date": "2024-09-06",
+          "partial": true,
+          "pullback_pct": 3.2
+        },
+        {
+          "pnl": -4.69,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2024-10-03",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -4.59
+        },
+        {
+          "pnl": -3.41,
+          "type": "SIG_REVERSAL",
+          "sector": "CapitalGoods",
+          "date": "2024-10-23",
+          "partial": true,
+          "pullback_pct": 3.31
+        },
+        {
+          "pnl": -2.25,
+          "type": "SIG_REVERSAL",
+          "sector": "CapitalGoods",
+          "date": "2024-11-13",
+          "partial": true,
+          "pullback_pct": 2.15
+        },
+        {
+          "pnl": 9.32,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2024-12-09",
+          "partial": true
+        },
+        {
+          "pnl": -4.57,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2024-12-23",
+          "partial": true
+        },
+        {
+          "pnl": -4.0,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2025-01-09",
+          "partial": true
+        },
+        {
+          "pnl": -3.94,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2025-01-24",
+          "partial": true
+        },
+        {
+          "pnl": -7.98,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2025-02-03",
+          "partial": true
+        },
+        {
+          "pnl": -1.39,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2025-03-13",
+          "partial": true,
+          "hold_days": 16,
+          "unreal_pct": -1.3
+        },
+        {
+          "pnl": 8.45,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2025-05-12",
+          "partial": true
+        },
+        {
+          "pnl": -2.4,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2025-07-07",
+          "partial": true,
+          "hold_days": 17,
+          "unreal_pct": -2.3
+        },
+        {
+          "pnl": 2.35,
+          "type": "TSL",
+          "sector": "CapitalGoods",
+          "date": "2025-08-20",
+          "partial": true
+        },
+        {
+          "pnl": -2.49,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2025-09-08",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -2.4
+        },
+        {
+          "pnl": 6.74,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2025-10-15",
+          "partial": true
+        },
+        {
+          "pnl": 4.93,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2025-11-27",
+          "partial": true
+        },
+        {
+          "pnl": -0.74,
+          "type": "TIME",
+          "sector": "CapitalGoods",
+          "date": "2025-12-30",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.64
+        },
+        {
+          "pnl": 8.62,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2026-02-17",
+          "partial": true
+        },
+        {
+          "pnl": -4.17,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2026-03-30",
+          "partial": true
+        },
+        {
+          "pnl": 13.97,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2026-04-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.33,
+          "type": "SIG_REVERSAL",
+          "sector": "CapitalGoods",
+          "date": "2026-05-06",
+          "partial": true,
+          "pullback_pct": 2.24
+        },
+        {
+          "pnl": -4.33,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2026-05-12",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "TITAN",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "SUNPHARMA",
+      "trades": 22,
+      "wins": 7,
+      "losses": 15,
+      "win_rate": 31.8,
+      "realized_return": -1.48,
+      "return": -49.02,
+      "sharpe": 0.49,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 5,
+      "time_exits": 5,
+      "abssl_exits": 5,
+      "partial_exits": 8,
+      "max_drawdown": 49.02,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.12,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-04-12",
+          "partial": false,
+          "pullback_pct": 2.02
+        },
+        {
+          "pnl": -2.4,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2024-05-24",
+          "partial": false,
+          "pullback_pct": 2.3
+        },
+        {
+          "pnl": 7.44,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2024-07-09",
+          "partial": true
+        },
+        {
+          "pnl": 6.56,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2024-09-17",
+          "partial": true
+        },
+        {
+          "pnl": 5.35,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2024-09-27",
+          "partial": true
+        },
+        {
+          "pnl": -1.05,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2024-10-29",
+          "partial": true,
+          "hold_days": 19,
+          "unreal_pct": -0.95
+        },
+        {
+          "pnl": -0.18,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2024-12-20",
+          "partial": true,
+          "hold_days": 18,
+          "unreal_pct": -0.08
+        },
+        {
+          "pnl": -3.92,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2025-01-13",
+          "partial": true,
+          "hold_days": 21,
+          "unreal_pct": -3.83
+        },
+        {
+          "pnl": -5.38,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2025-01-28",
+          "partial": true
+        },
+        {
+          "pnl": -2.76,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-02-18",
+          "partial": true,
+          "pullback_pct": 2.66
+        },
+        {
+          "pnl": 7.59,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2025-03-21",
+          "partial": true
+        },
+        {
+          "pnl": -3.92,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-05-12",
+          "partial": true,
+          "pullback_pct": 3.82
+        },
+        {
+          "pnl": -3.41,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2025-05-26",
+          "partial": true
+        },
+        {
+          "pnl": -0.17,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2025-07-23",
+          "partial": true,
+          "hold_days": 26,
+          "unreal_pct": -0.07
+        },
+        {
+          "pnl": -4.27,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2025-08-01",
+          "partial": true
+        },
+        {
+          "pnl": -2.2,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2025-08-26",
+          "partial": true,
+          "pullback_pct": 2.11
+        },
+        {
+          "pnl": 5.97,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2025-11-13",
+          "partial": true
+        },
+        {
+          "pnl": -3.1,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2025-12-19",
+          "partial": true
+        },
+        {
+          "pnl": -3.57,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2026-01-14",
+          "partial": true
+        },
+        {
+          "pnl": 4.11,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2026-02-25",
+          "partial": true
+        },
+        {
+          "pnl": -0.69,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2026-04-01",
+          "partial": true,
+          "hold_days": 33,
+          "unreal_pct": -0.59
+        },
+        {
+          "pnl": 9.29,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2026-05-04",
+          "partial": true
+        }
+      ]
+    }
+  ]
+}

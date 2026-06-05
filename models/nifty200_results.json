@@ -1,0 +1,96 @@
+{
+  "buy": [
+    {
+      "symbol": "RADICO",
+      "current_price": 3340.1,
+      "entry": 3343.44,
+      "stoploss": 3273.3,
+      "target1": 3440.3,
+      "target2": 3540.51,
+      "accuracy": 25.0
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "current_price": 1274.5,
+      "entry": 1275.77,
+      "stoploss": 1249.01,
+      "target1": 1312.74,
+      "target2": 1350.97,
+      "accuracy": 69.2
+    },
+    {
+      "symbol": "BHEL",
+      "current_price": 325.63,
+      "entry": 325.96,
+      "stoploss": 319.12,
+      "target1": 335.4,
+      "target2": 345.17,
+      "accuracy": 75.0
+    },
+    {
+      "symbol": "SBIN",
+      "current_price": 1107.85,
+      "entry": 1108.96,
+      "stoploss": 1085.69,
+      "target1": 1141.09,
+      "target2": 1174.32,
+      "accuracy": 92.3
+    },
+    {
+      "symbol": "TRENT",
+      "current_price": 4242.8,
+      "entry": 4247.04,
+      "stoploss": 4157.94,
+      "target1": 4370.08,
+      "target2": 4497.37,
+      "accuracy": 88.9
+    }
+  ],
+  "sell": [
+    {
+      "symbol": "PIIND",
+      "current_price": 3037.0,
+      "entry": 3033.96,
+      "stoploss": 3097.74,
+      "target1": 2945.89,
+      "target2": 2854.78,
+      "accuracy": 41.7
+    },
+    {
+      "symbol": "SBICARD",
+      "current_price": 675.3,
+      "entry": 674.62,
+      "stoploss": 688.81,
+      "target1": 655.04,
+      "target2": 634.78,
+      "accuracy": 87.5
+    },
+    {
+      "symbol": "JIOFIN",
+      "current_price": 237.15,
+      "entry": 236.91,
+      "stoploss": 241.89,
+      "target1": 230.04,
+      "target2": 222.92,
+      "accuracy": null
+    },
+    {
+      "symbol": "NATIONALUM",
+      "current_price": 426.65,
+      "entry": 426.22,
+      "stoploss": 435.18,
+      "target1": 413.85,
+      "target2": 401.05,
+      "accuracy": 38.9
+    },
+    {
+      "symbol": "HINDALCO",
+      "current_price": 1015.25,
+      "entry": 1014.23,
+      "stoploss": 1035.56,
+      "target1": 984.79,
+      "target2": 954.33,
+      "accuracy": 36.4
+    }
+  ]
+}

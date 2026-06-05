@@ -1,0 +1,12 @@
+name: market_regime_agent
+model: minimax-m2.7:cloud
+
+prompt: |
+  Analyze NIFTY trend using EMA 50/200 and price structure.
+
+  Output JSON:
+  {
+  "market_regime": "BULLISH / BEARISH / SIDEWAYS",
+  "confidence": "",
+  "note": ""
+  }

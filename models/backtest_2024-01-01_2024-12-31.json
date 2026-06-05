@@ -1,0 +1,255 @@
+{
+  "timestamp": "2026-04-21T11:33:16.216623",
+  "period": {
+    "start": "2024-01-01",
+    "end": "2024-12-31"
+  },
+  "results": {
+    "buy": [
+      {
+        "symbol": "SBIN",
+        "trades": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -5.14,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.08,
+        "total_return": -10.0,
+        "final_capital": 90022.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-29",
+            "exit_date": "2024-11-21",
+            "entry": 817.125207824707,
+            "exit": 764.616088256836,
+            "pnl": -6.426080001577372,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2024-11-25",
+            "exit_date": "2024-12-20",
+            "entry": 828.6554032592773,
+            "exit": 796.7608289473219,
+            "pnl": -3.848955088750672,
+            "type": "BUY-SL"
+          }
+        ]
+      },
+      {
+        "symbol": "TRENT",
+        "trades": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 50.0,
+        "avg_win": 4.62,
+        "avg_loss": -6.27,
+        "profit_factor": 0.74,
+        "max_drawdown": 0.47,
+        "total_return": -2.0,
+        "final_capital": 97976.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2024-11-05",
+            "entry": 7489.000073242187,
+            "exit": 7019.524197296404,
+            "pnl": -6.268872631250144,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2024-11-29",
+            "exit_date": "2024-12-31",
+            "entry": 6796.307584472655,
+            "exit": 7110.066897949218,
+            "pnl": 4.616614383277776,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "BHEL",
+        "trades": 0,
+        "win_rate": 0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "profit_factor": 0,
+        "max_drawdown": 0,
+        "total_return": 0,
+        "sharpe_ratio": 0
+      },
+      {
+        "symbol": "JSWSTEEL",
+        "trades": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -5.57,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.11,
+        "total_return": -10.8,
+        "final_capital": 89175.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-05",
+            "exit_date": "2024-11-13",
+            "entry": 997.8125505981444,
+            "exit": 936.6656632172962,
+            "pnl": -6.12809363283648,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2024-12-02",
+            "exit_date": "2024-12-19",
+            "entry": 988.1289264526366,
+            "exit": 938.5489827248696,
+            "pnl": -5.017558174899106,
+            "type": "BUY-SL"
+          }
+        ]
+      },
+      {
+        "symbol": "RADICO",
+        "trades": 1,
+        "wins": 1,
+        "losses": 0,
+        "win_rate": 100.0,
+        "avg_win": 13.27,
+        "avg_loss": 0,
+        "profit_factor": 0,
+        "max_drawdown": 0,
+        "total_return": 13.1,
+        "final_capital": 113092.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2024-12-31",
+            "entry": 2295.0676772460934,
+            "exit": 2599.524094482422,
+            "pnl": 13.265683633419167,
+            "type": "BUY-OPEN"
+          }
+        ]
+      }
+    ],
+    "sell": [
+      {
+        "symbol": "SBICARD",
+        "trades": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -3.09,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.02,
+        "total_return": -3.1,
+        "final_capital": 96925.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-12-05",
+            "exit_date": "2024-12-19",
+            "entry": 720.440423828125,
+            "exit": 698.1575278930665,
+            "pnl": -3.092954697996584,
+            "type": "BUY"
+          }
+        ]
+      },
+      {
+        "symbol": "JIOFIN",
+        "trades": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -4.82,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.02,
+        "total_return": -4.8,
+        "final_capital": 95198.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-12-03",
+            "exit_date": "2024-12-18",
+            "entry": 340.15991897583007,
+            "exit": 323.77054037475585,
+            "pnl": -4.818139259446013,
+            "type": "BUY"
+          }
+        ]
+      },
+      {
+        "symbol": "PIIND",
+        "trades": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -6.34,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.29,
+        "total_return": -6.1,
+        "final_capital": 93889.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-06",
+            "exit_date": "2024-11-14",
+            "entry": 4591.395402343749,
+            "exit": 4300.381292246217,
+            "pnl": -6.338249804165849,
+            "type": "BUY-SL"
+          }
+        ]
+      },
+      {
+        "symbol": "NATIONALUM",
+        "trades": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -5.14,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.01,
+        "total_return": -5.1,
+        "final_capital": 94869.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2024-12-31",
+            "entry": 209.8867705993652,
+            "exit": 199.10835530090333,
+            "pnl": -5.135347629430094,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "HINDALCO",
+        "trades": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -2.75,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.02,
+        "total_return": -2.7,
+        "final_capital": 97259.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-29",
+            "exit_date": "2024-12-17",
+            "entry": 652.074213317871,
+            "exit": 634.1599440307617,
+            "pnl": -2.7472746078944374,
+            "type": "BUY"
+          }
+        ]
+      }
+    ]
+  }
+}

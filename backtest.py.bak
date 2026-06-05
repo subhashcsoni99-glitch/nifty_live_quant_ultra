@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+"""
+NIFTY Live Quant Ultra - Backtest v8
+v8: T1 partial exit (one-time only) + drawdown fix
+    BEARISH divergence in backtest signal + RSI guards
+    MIN_TRADES raised to 20 for statistical confidence
+"""
+import sys
+import os
+import warnings
+warnings.filterwarnings('ignore')
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import yfinance as yf
+import numpy as np
+import pandas as pd
+import json
+from datetime import datetime
+
+from nifty_core import (
+    DEFAULT_STOCKS, EXCLUDED_STOCKS,
+    ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG,
+    SECTORS, MAX_PER_SECTOR,
+    get_ohlc, add_features, calc_levels, detect_divergence,
+    get_sector, check_sector_limit,
+)
+
+STOCKS = DEFAULT_STOCKS
+MIN_TRADES_THRESHOLD = 15
+MAX_HOLD_DAYS = 5
+
+def get_signal(df, i):
+    """Unified signal — mirrors scan.py exactly including RSI guards and divergence."""
+    if i < 200:
+        return 0, 'RANGE', None
+
+    row = df.iloc[i]
+    pv = row['Close']
+    ma20, ma50, ma200 = row['ma20'], row['ma50'], row['ma200']
+    rsi = row['rsi']
+    macd, macd_sig = row['macd'], row['macd_sig']
+    vol_ratio = row['vol_ratio']
+    ret5 = row['ret5']
+
+    if pd.isna(rsi) or pd.isna(ma20) or pd.isna(ma50) or pd.isna(ma200):
+        return 0, 'RANGE', None
+
+    c_price_ma20 = pv > ma20
+    c_price_ma50 = pv > ma50
+    c_ma50_ma200 = ma50 > ma200
+    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']
+    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
+    c_macd = macd > macd_sig
+    c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
+    c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
+
+    buy_cnt = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
+    sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200, c_rsi_sell, not c_macd, c_vol, not c_mom])
+
+    div = detect_divergence(df.iloc[:i+1])
+    if div == "BULLISH":
+        buy_cnt += 2
+    if div == "BEARISH":
+        sell_cnt += 2
+
+    if rsi > 70:
+        buy_cnt = 0
+    elif rsi > 65:
+        if not c_ma50_ma200:
+            buy_cnt = 0
+    if rsi < 35:
+        sell_cnt = 0
+
+    if buy_cnt >= SIGNAL_CONFIG['min_confirmations']:
+        return 1, 'BUY', div
+    elif sell_cnt >= SIGNAL_CONFIG['min_confirmations']:
+        return -1, 'SELL', div
+    return 0, 'RANGE', div
+
+def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limits=False,
+                   slippage_pct=0.001, max_position_pct=0.2,
+                   use_t1_partial=True, max_hold_days=5):
+    name = symbol.replace('.NS', '')
+    df = get_ohlc(symbol)
+    if df is None:
+        return None
+
+    df = add_features(df)
+    if end:
+        df = df[df.index <= end]
+    if start:
+        df = df[df.index >= start]
+    if len(df) < 200:
+        return None
+
+    capital = 100000
+    peak_capital = capital
+    max_drawdown = 0
+    shares = 0
+    position = None
+    entry_price = 0
+    entry_date = None
+    tsl = 0
+    shares_remaining = 0
+    partial_exits = 0
+    trades = []
+    sector_counts = {} if sector_limits else {}
+
+    for i in range(200, len(df)):
+        sig_val, sig_name, div = get_signal(df, i)
+        price = df['Close'].iloc[i]
+        atr = df['atr'].iloc[i]
+        if pd.isna(atr) or atr == 0:
+            atr = price * 0.02
+
+        entry_px = price * (1 + slippage_pct)
+        exit_px   = price * (1 - slippage_pct)
+
+        # Entry
+        if sig_val == 1 and position is None:
+            if sector_limits:
+                sector = get_sector(name)
+                if check_sector_limit(sector, sector_counts, MAX_PER_SECTOR):
+                    continue
+
+            risk = capital * 0.01
+            sl_dist = atr * 2.0  # fixed 2x for position sizing consistency
+            raw_shares = max(1, int(risk / sl_dist))
+            position_value = raw_shares * entry_px
+            max_pos_value = capital * max_position_pct
+            if position_value > max_pos_value:
+                raw_shares = max(1, int(max_pos_value / entry_px))
+
+            shares = raw_shares
+            shares_remaining = raw_shares
+            t1_triggered = False
+            position = 'LONG'
+            entry_price = entry_px
+            entry_date = df.index[i]
+            tsl = entry_price - atr * 1.5  # use fixed 1.5x (not ATR_CONFIG) for reliable trailing
+
+            if sector_limits:
+                sector_counts[sector] = sector_counts.get(sector, 0) + 1
+
+        # Signal exit
+        elif sig_val == -1 and position == 'LONG':
+            exit_price = exit_px
+            if shares_remaining > 0:
+                capital += shares_remaining * exit_price
+            peak_capital = max(peak_capital, capital)
+            drawdown = (peak_capital - capital) / peak_capital * 100
+            max_drawdown = max(max_drawdown, drawdown)
+            pnl = ((exit_price - entry_price) / entry_price) * 100
+            trades.append({'pnl': round(pnl, 2), 'type': 'SIG',
+                          'sector': get_sector(name), 'date': str(df.index[i].date()),
+                          'partial': partial_exits > 0})
+            shares = 0
+            shares_remaining = 0
+            t1_triggered = False
+            position = None
+            entry_date = None
+
+            if sector_limits:
+                sector = get_sector(name)
+                sector_counts[sector] = max(0, sector_counts.get(sector, 0) - 1)
+
+        # In position — track peak continuously (unrealized PnL)
+        elif position == 'LONG':
+            sl = entry_price - atr * 2.0  # 2x ATR — tight primary stop, reachable in non-trailing
+            t1 = entry_price + atr * ATR_CONFIG['intraday']['t1']
+
+            # Running peak: cash + current value of remaining shares
+            total_value = capital + shares_remaining * price
+            peak_capital = max(peak_capital, total_value)
+
+            # T1 Partial Exit (one-time only)
+            if use_t1_partial and shares_remaining > 0 and price >= t1 and not t1_triggered:
+                exit_shares = shares_remaining // 2
+                capital += exit_shares * exit_px
+                shares_remaining -= exit_shares
+                partial_exits += 1
+                sl = max(sl, entry_price)
+                tsl = max(tsl, entry_price)  # lock partial profit via TSL
+                t1_triggered = True
+
+            # Time-based exit (only if flat/mild loss — don't cut winners short)
+            hold_days = (df.index[i] - entry_date).days if entry_date else 0
+            unrealized_pnl_pct = ((price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
+            if hold_days > max_hold_days and sig_val != 1 and unrealized_pnl_pct < 2:
+                exit_price = exit_px
+                if shares_remaining > 0:
+                    capital += shares_remaining * exit_price
+                peak_capital = max(peak_capital, capital)
+                drawdown = (peak_capital - capital) / peak_capital * 100
+                max_drawdown = max(max_drawdown, drawdown)
+                pnl = ((exit_price - entry_price) / entry_price) * 100
+                trades.append({'pnl': round(pnl, 2), 'type': 'TIME',
+                              'sector': get_sector(name), 'date': str(df.index[i].date()),
+                              'partial': partial_exits > 0, 'hold_days': hold_days})
+                shares = 0
+                shares_remaining = 0
+                t1_triggered = False
+                position = None
+                entry_date = None
+                if sector_limits:
+                    s = get_sector(name)
+                    sector_counts[s] = max(0, sector_counts.get(s, 0) - 1)
+                continue
+
+            # ── Catastrophic stop: absolute 3% loss — always active ──
+            abs_sl = entry_price * 0.97
+            if price <= abs_sl:
+                exit_price = exit_px
+                if shares_remaining > 0:
+                    capital += shares_remaining * exit_price
+                peak_capital = max(peak_capital, capital)
+                drawdown = (peak_capital - capital) / peak_capital * 100
+                max_drawdown = max(max_drawdown, drawdown)
+                pnl = ((exit_price - entry_price) / entry_price) * 100
+                trades.append({'pnl': round(pnl, 2), 'type': 'ABSSL',
+                              'sector': get_sector(name), 'date': str(df.index[i].date()),
+                              'partial': partial_exits > 0})
+                shares = 0
+                shares_remaining = 0
+                t1_triggered = False
+                position = None
+                entry_date = None
+                if sector_limits:
+                    s = get_sector(name)
+                    sector_counts[s] = max(0, sector_counts.get(s, 0) - 1)
+                continue
+
+            # Trailing SL — activates after price rises entry + 0.5*ATR
+            if use_trailing:
+                new_tsl = price - atr * 1.5  # fixed 1.5x for consistent trailing
+                if new_tsl > tsl and price >= entry_price + atr * 0.5:
+                    tsl = new_tsl
+
+                # TSL exit
+                exited = False
+                if tsl > 0 and price <= tsl:
+                    exit_price = exit_px
+                    if shares_remaining > 0:
+                        capital += shares_remaining * exit_price
+                    peak_capital = max(peak_capital, capital)
+                    drawdown = (peak_capital - capital) / peak_capital * 100
+                    max_drawdown = max(max_drawdown, drawdown)
+                    pnl = ((exit_price - entry_price) / entry_price) * 100
+                    trades.append({'pnl': round(pnl, 2), 'type': 'TSL',
+                                  'sector': get_sector(name), 'date': str(df.index[i].date()),
+                                  'partial': partial_exits > 0})
+                    shares = 0
+                    shares_remaining = 0
+                    t1_triggered = False
+                    position = None
+                    entry_date = None
+                    if sector_limits:
+                        s = get_sector(name)
+                        sector_counts[s] = max(0, sector_counts.get(s, 0) - 1)
+                    exited = True
+
+                # Hard SL — always checked, independent of TSL
+                if not exited and price <= sl:
+                    exit_price = exit_px
+                    if shares_remaining > 0:
+                        capital += shares_remaining * exit_price
+                    peak_capital = max(peak_capital, capital)
+                    drawdown = (peak_capital - capital) / peak_capital * 100
+                    max_drawdown = max(max_drawdown, drawdown)
+                    pnl = ((exit_price - entry_price) / entry_price) * 100
+                    trades.append({'pnl': round(pnl, 2), 'type': 'SL',
+                                  'sector': get_sector(name), 'date': str(df.index[i].date()),
+                                  'partial': partial_exits > 0})
+                    shares = 0
+                    shares_remaining = 0
+                    t1_triggered = False
+                    position = None
+                    entry_date = None
+                    if sector_limits:
+                        s = get_sector(name)
+                        sector_counts[s] = max(0, sector_counts.get(s, 0) - 1)
+                    exited = True
+
+                if exited:
+                    continue
+
+            # Fixed SL (non-trailing)
+            if price <= sl:
+                exit_price = exit_px
+                if shares_remaining > 0:
+                    capital += shares_remaining * exit_price
+                peak_capital = max(peak_capital, capital)
+                drawdown = (peak_capital - capital) / peak_capital * 100
+                max_drawdown = max(max_drawdown, drawdown)
+                pnl = ((exit_price - entry_price) / entry_price) * 100
+                trades.append({'pnl': round(pnl, 2), 'type': 'SL',
+                              'sector': get_sector(name), 'date': str(df.index[i].date()),
+                              'partial': partial_exits > 0})
+                shares = 0
+                shares_remaining = 0
+                t1_triggered = False
+                position = None
+                entry_date = None
+                if sector_limits:
+                    s = get_sector(name)
+                    sector_counts[s] = max(0, sector_counts.get(s, 0) - 1)
+
+    # Close open position at end
+    # Close open position at end
+    if position == 'LONG' and shares_remaining > 0:
+        exit_price = df['Close'].iloc[-1] * (1 - slippage_pct)
+        capital += shares_remaining * exit_price
+        peak_capital = max(peak_capital, capital)
+        drawdown = (peak_capital - capital) / peak_capital * 100
+        max_drawdown = max(max_drawdown, drawdown)
+
+    if not trades:
+        return {'symbol': name, 'trades': 0, 'win_rate': 0, 'return': 0,
+                'wins': 0, 'losses': 0, 'avg_win': 0, 'avg_loss': 0,
+                'tsl_exits': 0, 'sl_exits': 0, 'sig_exits': 0, 'time_exits': 0,
+                'partial_exits': 0, 'max_drawdown': 0, 'qualified': False}
+
+    wins = [t['pnl'] for t in trades if t['pnl'] > 0]
+    losses = [t['pnl'] for t in trades if t['pnl'] <= 0]
+    total_ret = ((capital - 100000) / 100000) * 100
+
+    return {
+        'symbol': name,
+        'trades': len(trades),
+        'wins': len(wins),
+        'losses': len(losses),
+        'win_rate': round(len(wins) / len(trades) * 100, 1),
+        'return': round(total_ret, 1),
+        'avg_win': round(np.mean(wins), 2) if wins else 0,
+        'avg_loss': round(np.mean(losses), 2) if losses else 0,
+        'tsl_exits': sum(1 for t in trades if t['type'] == 'TSL'),
+        'sl_exits': sum(1 for t in trades if t['type'] == 'SL'),
+        'sig_exits': sum(1 for t in trades if t['type'] == 'SIG'),
+        'time_exits': sum(1 for t in trades if t['type'] == 'TIME'),
+        'partial_exits': partial_exits,
+        'max_drawdown': round(max_drawdown, 2),
+        'qualified': len(trades) >= MIN_TRADES_THRESHOLD,
+    }
+
+def run_backtest(start='2024-01-01', end='2025-12-31', use_trailing=False, sector_limits=False,
+                 use_t1_partial=True, max_hold_days=5,
+                 slippage_pct=0.001, max_position_pct=0.2):
+    print("=" * 70)
+    tags = []
+    if use_trailing: tags.append("+TrailingSL")
+    if sector_limits: tags.append("+SectorCap")
+    if use_t1_partial: tags.append("+T1Partial")
+    tags.append("+TimeExit" + str(max_hold_days) + "d")
+    tag = " (" + ", ".join(tags) + ")" if tags else ""
+    print("NIFTY BACKTEST v8" + tag)
+    print("Period: " + start + " -> " + end + " | Excluded: " + str(EXCLUDED_STOCKS))
+    print("Min trades for qualification: " + str(MIN_TRADES_THRESHOLD))
+    print("=" * 70)
+
+    results = []
+    for sym in STOCKS:
+        name = sym.replace('.NS', '')
+        print("\n" + name + "...", end=" ", flush=True)
+        try:
+            r = backtest_stock(sym, start, end, use_trailing=use_trailing, sector_limits=sector_limits,
+                              use_t1_partial=use_t1_partial, max_hold_days=max_hold_days,
+                              slippage_pct=slippage_pct, max_position_pct=max_position_pct)
+        except Exception as e:
+            print("ERROR: " + str(e))
+            r = None
+        if r:
+            results.append(r)
+            qual_str = "PASS" if r['qualified'] else "FAIL"
+            t1_str = " T1:" + str(r['partial_exits']) if use_t1_partial else ""
+            time_str = " Time:" + str(r['time_exits']) if r['time_exits'] > 0 else ""
+            print(qual_str + " " + str(r['trades']) + " trades, " + str(r['win_rate']) + "% win, " + str(r['return']) + "% return"
+                  + " DD:" + str(r['max_drawdown']) + "%" + t1_str + time_str)
+        else:
+            print("FAIL")
+
+    if not results:
+        print("No results!")
+        return []
+
+    print("\n" + "=" * 70)
+    print("RESULTS")
+    print("=" * 70)
+
+    active = [r for r in results if r['trades'] > 0]
+    qualified = [r for r in results if r['qualified']]
+    if active:
+        avg_wr = np.mean([r['win_rate'] for r in active])
+        avg_ret = np.mean([r['return'] for r in active])
+        avg_dd = np.mean([r['max_drawdown'] for r in active])
+        best = max(active, key=lambda x: x['return'])
+        worst = min(active, key=lambda x: x['return'])
+        print("ALL AVG: " + str(round(avg_wr, 1)) + "% WR, " + str(round(avg_ret, 1)) + "% return, " + str(round(avg_dd, 1)) + "% DD")
+        print("BEST: " + best['symbol'] + " " + str(best['return']) + "% (DD: " + str(best['max_drawdown']) + "%)")
+        print("WORST: " + worst['symbol'] + " " + str(worst['return']) + "% (DD: " + str(worst['max_drawdown']) + "%)")
+
+    total_t1 = sum(r['partial_exits'] for r in results)
+    total_time = sum(r['time_exits'] for r in results)
+    total_sl = sum(r['sl_exits'] for r in results)
+    total_sig = sum(r['sig_exits'] for r in results)
+    total_tsl = sum(r['tsl_exits'] for r in results)
+    all_trades = sum(r['trades'] for r in results)
+    print("\nEXIT TYPES (of " + str(all_trades) + " total trades):")
+    print("  T1 Partial: " + str(total_t1) + " (" + str(round(total_t1*100/max(all_trades,1), 1)) + "%)")
+    print("  Time Exit:  " + str(total_time) + " (" + str(round(total_time*100/max(all_trades,1), 1)) + "%)")
+    print("  SL Exit:    " + str(total_sl) + " (" + str(round(total_sl*100/max(all_trades,1), 1)) + "%)")
+    print("  SIG Exit:   " + str(total_sig) + " (" + str(round(total_sig*100/max(all_trades,1), 1)) + "%)")
+    print("  TSL Exit:   " + str(total_tsl) + " (" + str(round(total_tsl*100/max(all_trades,1), 1)) + "%)")
+
+    out = "models/backtest_v8_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json"
+    with open(out, 'w') as f:
+        json.dump({'timestamp': datetime.now().isoformat(), 'results': results,
+                   'config': {'use_t1_partial': use_t1_partial, 'max_hold_days': max_hold_days,
+                              'min_trades_threshold': MIN_TRADES_THRESHOLD,
+                              'slippage_pct': slippage_pct, 'max_position_pct': max_position_pct,
+                              'rsi_guards': True, 'bearish_divergence': True}}, f, indent=2)
+    print("\nSaved to " + out)
+    return results
+
+if __name__ == "__main__":
+    s = '2024-01-01'
+    e = '2025-12-31'
+    use_trailing = False
+    use_sector_cap = False
+    use_t1_partial = True
+    max_hold_days = 5
+    stock_override = None
+    years = None
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        if arg == '--stock' and i + 1 < len(sys.argv):
+            stock_override = sys.argv[i + 1]; i += 2
+        elif arg == '--all':
+            i += 1
+        elif arg == '--trailing':
+            use_trailing = True; i += 1
+        elif arg == '--sector-cap':
+            use_sector_cap = True; i += 1
+        elif arg == '--no-t1':
+            use_t1_partial = False; i += 1
+        elif arg == '--time-exit' and i + 1 < len(sys.argv):
+            max_hold_days = int(sys.argv[i + 1]); i += 2
+        elif arg == '--years' and i + 1 < len(sys.argv):
+            years = int(sys.argv[i + 1]); i += 2
+        elif arg == '--initial' and i + 1 < len(sys.argv):
+            i += 2
+        elif arg.startswith('--'):
+            i += 1
+        else:
+            i += 1
+    if stock_override:
+        STOCKS[:] = [stock_override]
+    if years:
+        from datetime import datetime, timedelta
+        e = datetime.now().strftime('%Y-%m-%d')
+        s = (datetime.now() - timedelta(days=365 * years)).strftime('%Y-%m-%d')
+    run_backtest(s, e, use_trailing=use_trailing, sector_limits=use_sector_cap,
+                 use_t1_partial=use_t1_partial, max_hold_days=max_hold_days,
+                 slippage_pct=0.001, max_position_pct=0.2)

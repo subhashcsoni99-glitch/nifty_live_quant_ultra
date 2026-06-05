@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-04-21T10:14:25.975055",
+  "model": "Trend-Following (RandomForest)",
+  "strategy": "Multi-timeframe trend confirmation",
+  "results": {
+    "buy": [
+      {
+        "symbol": "SBIN",
+        "price": 1108.6,
+        "entry": 1109.71,
+        "stoploss": 1043.49,
+        "target1": 1206.26,
+        "target2": 1303.92,
+        "accuracy": 100.0,
+        "confidence": 98.9,
+        "trend": "UPTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "TRENT",
+        "price": 4313.3,
+        "entry": 4317.61,
+        "stoploss": 4017.39,
+        "target1": 4757.17,
+        "target2": 5201.04,
+        "accuracy": 100.0,
+        "confidence": 99.4,
+        "trend": "DOWNTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "BHEL",
+        "price": 329.51,
+        "entry": 329.84,
+        "stoploss": 303.99,
+        "target1": 367.79,
+        "target2": 406.07,
+        "accuracy": 100.0,
+        "confidence": 100.0,
+        "trend": "UPTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "JSWSTEEL",
+        "price": 1287.5,
+        "entry": 1288.79,
+        "stoploss": 1220.61,
+        "target1": 1387.83,
+        "target2": 1488.16,
+        "accuracy": 100.0,
+        "confidence": 99.4,
+        "trend": "UPTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "RADICO",
+        "price": 3254.5,
+        "entry": 3257.75,
+        "stoploss": 3011.61,
+        "target1": 3618.83,
+        "target2": 3983.16,
+        "accuracy": 100.0,
+        "confidence": 99.8,
+        "trend": "RANGE",
+        "signal": "BUY"
+      }
+    ],
+    "sell": [
+      {
+        "symbol": "SBICARD",
+        "price": 676.2,
+        "entry": 675.52,
+        "stoploss": 721.07,
+        "target1": 608.89,
+        "target2": 541.59,
+        "accuracy": 100.0,
+        "confidence": 97.8,
+        "trend": "DOWNTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "JIOFIN",
+        "price": 235.8,
+        "entry": 235.56,
+        "stoploss": 251.02,
+        "target1": 212.97,
+        "target2": 190.14,
+        "accuracy": 100.0,
+        "confidence": 67.5,
+        "trend": "DOWNTREND",
+        "signal": "SELL"
+      },
+      {
+        "symbol": "PIIND",
+        "price": 3084.0,
+        "entry": 3080.92,
+        "stoploss": 3293.26,
+        "target1": 2770.11,
+        "target2": 2456.23,
+        "accuracy": 100.0,
+        "confidence": 99.5,
+        "trend": "DOWNTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "NATIONALUM",
+        "price": 426.45,
+        "entry": 426.02,
+        "stoploss": 456.68,
+        "target1": 381.11,
+        "target2": 335.76,
+        "accuracy": 100.0,
+        "confidence": 100.0,
+        "trend": "UPTREND",
+        "signal": "BUY"
+      },
+      {
+        "symbol": "HINDALCO",
+        "price": 1020.65,
+        "entry": 1019.63,
+        "stoploss": 1083.38,
+        "target1": 926.56,
+        "target2": 832.46,
+        "accuracy": 100.0,
+        "confidence": 100.0,
+        "trend": "UPTREND",
+        "signal": "BUY"
+      }
+    ]
+  }
+}

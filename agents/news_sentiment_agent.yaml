@@ -1,0 +1,14 @@
+name: news_sentiment_agent
+model: gemini-3-flash-preview:cloud
+
+prompt: |
+  Analyze latest news for each stock.
+
+  Output:
+  [
+  {
+  "stock": "",
+  "sentiment": "POSITIVE / NEGATIVE / NEUTRAL",
+  "impact": "HIGH/MEDIUM/LOW"
+  }
+  ]

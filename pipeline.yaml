@@ -1,0 +1,14 @@
+name: nifty_live_quant_ultra
+description: AI-powered NIFTY trading system with learning
+entry: pipeline.yaml
+
+pipeline:
+  - agent: market_regime_agent
+  - agent: news_sentiment_agent
+  - agent: scanner_agent
+  - agent: validator_agent
+  - agent: options_flow_agent
+  - agent: risk_manager_agent
+  - agent: execution_agent
+  - agent: trade_replay_agent
+  - agent: learning_agent

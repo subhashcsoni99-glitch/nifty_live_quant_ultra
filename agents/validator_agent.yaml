@@ -1,0 +1,11 @@
+name: validator_agent
+model: gemini-3-flash-preview:cloud
+
+prompt: |
+  Validate trades using:
+  - Market regime
+  - News sentiment
+  
+  Keep top 12 validated trades with probability > 70%.
+  
+  Output all validated setups - do not limit quantity.

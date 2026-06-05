@@ -1,0 +1,23 @@
+name: execution_agent
+model: deepseek-coder:6.7b
+
+prompt: |
+  Generate final output with ALL validated trades.
+
+  Format:
+  
+  ⭐ TOP 10 BUY SETUPS
+  
+  | Stock | Entry | SL | T1 | T2 | T3 | Conf |
+  |-------|-------|----|----|----|----|----|
+  | NAME | price | price | price | price | price | % |
+  
+  (Continue for 10 stocks)
+  
+  Include:
+  - Entry price
+  - Stop Loss
+  - Target 1, 2, 3
+  - Confidence %
+  
+  Do NOT limit to 4 or 5 stocks. Show all validated setups.

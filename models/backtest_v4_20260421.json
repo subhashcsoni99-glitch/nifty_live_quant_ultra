@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-04-21T22:50:02.166274",
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 5,
+      "wins": 3,
+      "losses": 2,
+      "win_rate": 60.0,
+      "return": 13.7,
+      "avg_win": 6.5,
+      "avg_loss": -2.94
+    },
+    {
+      "symbol": "BHEL",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "return": 12.2,
+      "avg_win": 0,
+      "avg_loss": -3.72
+    },
+    {
+      "symbol": "RADICO",
+      "trades": 5,
+      "wins": 3,
+      "losses": 2,
+      "win_rate": 60.0,
+      "return": 6.1,
+      "avg_win": 10.61,
+      "avg_loss": -7.73
+    },
+    {
+      "symbol": "SBICARD",
+      "trades": 8,
+      "wins": 4,
+      "losses": 4,
+      "win_rate": 50.0,
+      "return": 10.6,
+      "avg_win": 8.28,
+      "avg_loss": -2.65
+    },
+    {
+      "symbol": "HINDALCO",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "return": 8.2,
+      "avg_win": 13.28,
+      "avg_loss": -2.09
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "trades": 7,
+      "wins": 5,
+      "losses": 2,
+      "win_rate": 71.4,
+      "return": 10.0,
+      "avg_win": 6.37,
+      "avg_loss": -4.35
+    },
+    {
+      "symbol": "HDFCBANK",
+      "trades": 8,
+      "wins": 4,
+      "losses": 4,
+      "win_rate": 50.0,
+      "return": -0.5,
+      "avg_win": 2.4,
+      "avg_loss": -2.31
+    },
+    {
+      "symbol": "RELIANCE",
+      "trades": 7,
+      "wins": 1,
+      "losses": 6,
+      "win_rate": 14.3,
+      "return": -3.4,
+      "avg_win": 10.75,
+      "avg_loss": -2.31
+    },
+    {
+      "symbol": "TCS",
+      "trades": 7,
+      "wins": 2,
+      "losses": 5,
+      "win_rate": 28.6,
+      "return": -1.6,
+      "avg_win": 4.79,
+      "avg_loss": -2.36
+    },
+    {
+      "symbol": "ITC",
+      "trades": 8,
+      "wins": 0,
+      "losses": 8,
+      "win_rate": 0.0,
+      "return": -7.1,
+      "avg_win": 0,
+      "avg_loss": -1.41
+    }
+  ]
+}

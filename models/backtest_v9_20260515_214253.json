@@ -1,0 +1,988 @@
+{
+  "timestamp": "2026-05-15T21:42:53.715837",
+  "start": "2025-05-15",
+  "end": "2026-05-15",
+  "years": 1,
+  "no_sig_exit": false,
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "BHEL",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "HINDALCO",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "realized_return": -0.25,
+      "return": -6.14,
+      "sharpe": 4.03,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 2,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 6.14,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.38,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2026-03-13",
+          "partial": false,
+          "pullback_pct": 3.28
+        },
+        {
+          "pnl": 13.27,
+          "type": "T2",
+          "sector": "Steel",
+          "date": "2026-04-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.33,
+          "type": "SIG_REVERSAL",
+          "sector": "Steel",
+          "date": "2026-05-11",
+          "partial": true,
+          "pullback_pct": 2.23
+        },
+        {
+          "pnl": -0.72,
+          "type": "CLOSED",
+          "sector": "Steel",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "win_rate": 100.0,
+      "realized_return": 0.1,
+      "return": 0.41,
+      "sharpe": 0.0,
+      "tsl_exits": 1,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 2.09,
+          "type": "TSL",
+          "sector": "Diversified",
+          "date": "2026-05-11",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "HDFCBANK",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "realized_return": -1.17,
+      "return": -1.17,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 1,
+      "partial_exits": 0,
+      "max_drawdown": 1.17,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.73,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-16",
+          "partial": false,
+          "pullback_pct": 2.63
+        },
+        {
+          "pnl": -4.32,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-05-11",
+          "partial": false
+        }
+      ]
+    },
+    {
+      "symbol": "RELIANCE",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "realized_return": -1.07,
+      "return": -1.07,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 1,
+      "partial_exits": 0,
+      "max_drawdown": 1.07,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.23,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-03-16",
+          "partial": false,
+          "pullback_pct": 2.13
+        },
+        {
+          "pnl": -4.88,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-27",
+          "partial": false
+        }
+      ]
+    },
+    {
+      "symbol": "TCS",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "win_rate": 100.0,
+      "realized_return": 0.21,
+      "return": 0.62,
+      "sharpe": 0.0,
+      "tsl_exits": 1,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 2.92,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2026-04-30",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "ITC",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "win_rate": 100.0,
+      "realized_return": 0.19,
+      "return": 0.55,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 2.11,
+          "type": "CLOSED",
+          "sector": "FMCG",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "HCLTECH",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "realized_return": -0.73,
+      "return": -0.1,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 2,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 0.1,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.92,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-03-17",
+          "partial": false,
+          "pullback_pct": 2.82
+        },
+        {
+          "pnl": -3.82,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-04-22",
+          "partial": true,
+          "pullback_pct": 3.73
+        }
+      ]
+    },
+    {
+      "symbol": "WIPRO",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "win_rate": 50.0,
+      "realized_return": -0.37,
+      "return": 0.19,
+      "sharpe": 0.0,
+      "tsl_exits": 1,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 1,
+      "partial_exits": 1,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.71,
+          "type": "ABSSL",
+          "sector": "IT",
+          "date": "2026-03-16",
+          "partial": false
+        },
+        {
+          "pnl": 3.22,
+          "type": "TSL",
+          "sector": "IT",
+          "date": "2026-04-28",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "TECHM",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "win_rate": 50.0,
+      "realized_return": 0.13,
+      "return": -6.94,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 6.94,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": 11.75,
+          "type": "T2",
+          "sector": "IT",
+          "date": "2026-04-17",
+          "partial": true
+        },
+        {
+          "pnl": -5.66,
+          "type": "SIG_REVERSAL",
+          "sector": "IT",
+          "date": "2026-05-12",
+          "partial": true,
+          "pullback_pct": 5.56
+        }
+      ]
+    },
+    {
+      "symbol": "INDUSINDBK",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "realized_return": -1.14,
+      "return": -6.22,
+      "sharpe": 1.47,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 2,
+      "partial_exits": 1,
+      "max_drawdown": 6.22,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -6.69,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-09",
+          "partial": false
+        },
+        {
+          "pnl": -5.11,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-23",
+          "partial": false
+        },
+        {
+          "pnl": 16.07,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-04-29",
+          "partial": true
+        },
+        {
+          "pnl": -0.92,
+          "type": "CLOSED",
+          "sector": "Banking",
+          "date": "2026-05-15",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "BAJAJFINSV",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "realized_return": -1.05,
+      "return": -1.05,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 1,
+      "partial_exits": 0,
+      "max_drawdown": 1.05,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.29,
+          "type": "SIG_REVERSAL",
+          "sector": "Diversified",
+          "date": "2026-04-30",
+          "partial": false,
+          "pullback_pct": 2.19
+        },
+        {
+          "pnl": -3.85,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-05-13",
+          "partial": false
+        }
+      ]
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "win_rate": 50.0,
+      "realized_return": -0.16,
+      "return": -0.16,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.16,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.76,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-23",
+          "partial": false,
+          "pullback_pct": 2.66
+        },
+        {
+          "pnl": 1.37,
+          "type": "CLOSED",
+          "sector": "Banking",
+          "date": "2026-05-15",
+          "partial": false
+        }
+      ]
+    },
+    {
+      "symbol": "AXISBANK",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "realized_return": -1.37,
+      "return": -7.44,
+      "sharpe": -0.1,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 3,
+      "partial_exits": 1,
+      "max_drawdown": 7.44,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -6.31,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-09",
+          "partial": false
+        },
+        {
+          "pnl": -3.73,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-03-30",
+          "partial": false
+        },
+        {
+          "pnl": 12.99,
+          "type": "T2",
+          "sector": "Banking",
+          "date": "2026-04-10",
+          "partial": true
+        },
+        {
+          "pnl": -3.14,
+          "type": "ABSSL",
+          "sector": "Banking",
+          "date": "2026-05-14",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "ICICIBANK",
+      "trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "win_rate": 0.0,
+      "realized_return": -0.18,
+      "return": 0.2,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -2.35,
+          "type": "SIG_REVERSAL",
+          "sector": "Banking",
+          "date": "2026-04-29",
+          "partial": true,
+          "pullback_pct": 2.25
+        }
+      ]
+    },
+    {
+      "symbol": "SBILIFE",
+      "trades": 2,
+      "wins": 0,
+      "losses": 2,
+      "win_rate": 0.0,
+      "realized_return": -1.35,
+      "return": -1.35,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 1,
+      "partial_exits": 0,
+      "max_drawdown": 1.35,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -5.67,
+          "type": "ABSSL",
+          "sector": "Pharma",
+          "date": "2026-03-23",
+          "partial": false
+        },
+        {
+          "pnl": -4.36,
+          "type": "SIG_REVERSAL",
+          "sector": "Pharma",
+          "date": "2026-04-23",
+          "partial": false,
+          "pullback_pct": 4.26
+        }
+      ]
+    },
+    {
+      "symbol": "ULTRACEMCO",
+      "trades": 3,
+      "wins": 0,
+      "losses": 3,
+      "win_rate": 0.0,
+      "realized_return": -1.14,
+      "return": -1.14,
+      "sharpe": -8.47,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 1,
+      "abssl_exits": 2,
+      "partial_exits": 1,
+      "max_drawdown": 1.14,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -3.5,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2026-03-04",
+          "partial": false
+        },
+        {
+          "pnl": -5.42,
+          "type": "ABSSL",
+          "sector": "Materials",
+          "date": "2026-03-23",
+          "partial": false
+        },
+        {
+          "pnl": -0.95,
+          "type": "TIME",
+          "sector": "Materials",
+          "date": "2026-05-12",
+          "partial": true,
+          "hold_days": 34,
+          "unreal_pct": -0.85
+        }
+      ]
+    },
+    {
+      "symbol": "GRASIM",
+      "trades": 3,
+      "wins": 1,
+      "losses": 2,
+      "win_rate": 33.3,
+      "realized_return": -0.72,
+      "return": -9.07,
+      "sharpe": -2.29,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 2,
+      "partial_exits": 1,
+      "max_drawdown": 9.07,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -6.29,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-13",
+          "partial": false
+        },
+        {
+          "pnl": -3.45,
+          "type": "ABSSL",
+          "sector": "Diversified",
+          "date": "2026-03-23",
+          "partial": false
+        },
+        {
+          "pnl": 7.22,
+          "type": "T2",
+          "sector": "Diversified",
+          "date": "2026-05-06",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "LT",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "realized_return": -0.38,
+      "return": -8.22,
+      "sharpe": 1.63,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 1,
+      "time_exits": 0,
+      "abssl_exits": 2,
+      "partial_exits": 1,
+      "max_drawdown": 8.22,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -4.17,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2026-03-30",
+          "partial": false
+        },
+        {
+          "pnl": 13.97,
+          "type": "T2",
+          "sector": "CapitalGoods",
+          "date": "2026-04-16",
+          "partial": true
+        },
+        {
+          "pnl": -2.33,
+          "type": "SIG_REVERSAL",
+          "sector": "CapitalGoods",
+          "date": "2026-05-06",
+          "partial": true,
+          "pullback_pct": 2.24
+        },
+        {
+          "pnl": -4.33,
+          "type": "ABSSL",
+          "sector": "CapitalGoods",
+          "date": "2026-05-12",
+          "partial": true
+        }
+      ]
+    },
+    {
+      "symbol": "TITAN",
+      "trades": 0,
+      "win_rate": 0,
+      "compounded_return": 0.0,
+      "realized_return": 0.0,
+      "wins": 0,
+      "losses": 0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "sharpe": 0.0,
+      "position_util": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 0,
+      "abssl_exits": 0,
+      "partial_exits": 0,
+      "max_drawdown": 0.0,
+      "qualified": false,
+      "no_sig_exit": false
+    },
+    {
+      "symbol": "SUNPHARMA",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "win_rate": 50.0,
+      "realized_return": 0.34,
+      "return": -6.51,
+      "sharpe": 0.0,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 1,
+      "abssl_exits": 0,
+      "partial_exits": 1,
+      "max_drawdown": 6.51,
+      "qualified": false,
+      "no_sig_exit": false,
+      "config": {
+        "use_t1_partial": true,
+        "max_hold_days": 15,
+        "min_trades": 20,
+        "slippage_pct": 0.001,
+        "max_position_pct": 0.2,
+        "no_sig_exit": false,
+        "rsi_guards": true,
+        "bearish_divergence": true
+      },
+      "trades_list": [
+        {
+          "pnl": -1.45,
+          "type": "TIME",
+          "sector": "Pharma",
+          "date": "2026-04-01",
+          "partial": false,
+          "hold_days": 28,
+          "unreal_pct": -1.36
+        },
+        {
+          "pnl": 9.29,
+          "type": "T2",
+          "sector": "Pharma",
+          "date": "2026-05-04",
+          "partial": true
+        }
+      ]
+    }
+  ]
+}

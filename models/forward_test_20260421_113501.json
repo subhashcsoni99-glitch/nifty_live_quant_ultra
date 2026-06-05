@@ -1,0 +1,218 @@
+{
+  "timestamp": "2026-04-21T11:35:01.348906",
+  "test_days": 30,
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "test_days": 30,
+      "return": 4.07,
+      "win_rate": 100.0,
+      "final_capital": 104071.0,
+      "avg_win": 4.11,
+      "avg_loss": 0,
+      "best_trade": 4.11,
+      "worst_trade": 4.11,
+      "trades_list": [
+        {
+          "type": "OPEN",
+          "entry": 1064.6135988769531,
+          "exit": 1108.3905,
+          "pnl": 4.111999054795706,
+          "date": "CURRENT"
+        }
+      ]
+    },
+    {
+      "symbol": "TRENT",
+      "trades": 0,
+      "test_days": 30,
+      "return": 0,
+      "win_rate": 0,
+      "message": "No signals generated"
+    },
+    {
+      "symbol": "BHEL",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "test_days": 30,
+      "return": 6.36,
+      "win_rate": 25.0,
+      "final_capital": 106360.0,
+      "avg_win": 24.08,
+      "avg_loss": -5.0,
+      "best_trade": 24.08,
+      "worst_trade": -6.2,
+      "trades_list": [
+        {
+          "type": "BUY\u2192SELL",
+          "entry": 268.1178561096191,
+          "exit": 251.49825,
+          "pnl": -6.198619648377391,
+          "date": "2026-03-19"
+        },
+        {
+          "type": "BUY\u2192SELL",
+          "entry": 262.31203778076167,
+          "exit": 252.5971560974121,
+          "pnl": -3.7035592287492336,
+          "date": "2026-03-23"
+        },
+        {
+          "type": "BUY\u2192SELL",
+          "entry": 258.45821221923825,
+          "exit": 245.2545,
+          "pnl": -5.108644877585912,
+          "date": "2026-03-30"
+        },
+        {
+          "type": "OPEN",
+          "entry": 265.96571221923824,
+          "exit": 329.99965658569334,
+          "pnl": 24.076014848737824,
+          "date": "CURRENT"
+        }
+      ]
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "test_days": 30,
+      "return": 5.5,
+      "win_rate": 50.0,
+      "final_capital": 105497.0,
+      "avg_win": 11.76,
+      "avg_loss": -5.49,
+      "best_trade": 11.76,
+      "worst_trade": -5.49,
+      "trades_list": [
+        {
+          "type": "SL",
+          "entry": 1249.3480755615233,
+          "exit": 1180.8089069293212,
+          "pnl": -5.485994653763478,
+          "date": "2026-03-11"
+        },
+        {
+          "type": "OPEN",
+          "entry": 1153.0519244384764,
+          "exit": 1288.6101243896485,
+          "pnl": 11.756469685195443,
+          "date": "CURRENT"
+        }
+      ]
+    },
+    {
+      "symbol": "RADICO",
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "test_days": 30,
+      "return": 6.09,
+      "win_rate": 100.0,
+      "final_capital": 106087.0,
+      "avg_win": 6.26,
+      "avg_loss": 0,
+      "best_trade": 6.26,
+      "worst_trade": 6.26,
+      "trades_list": [
+        {
+          "type": "OPEN",
+          "entry": 3039.4363022460934,
+          "exit": 3229.667002441406,
+          "pnl": 6.258749362660943,
+          "date": "CURRENT"
+        }
+      ]
+    },
+    {
+      "symbol": "SBICARD",
+      "trades": 0,
+      "test_days": 30,
+      "return": 0,
+      "win_rate": 0,
+      "message": "No signals generated"
+    },
+    {
+      "symbol": "JIOFIN",
+      "trades": 0,
+      "test_days": 30,
+      "return": 0,
+      "win_rate": 0,
+      "message": "No signals generated"
+    },
+    {
+      "symbol": "PIIND",
+      "trades": 0,
+      "test_days": 30,
+      "return": 0,
+      "win_rate": 0,
+      "message": "No signals generated"
+    },
+    {
+      "symbol": "NATIONALUM",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "test_days": 30,
+      "return": -4.85,
+      "win_rate": 50.0,
+      "final_capital": 95154.0,
+      "avg_win": 6.05,
+      "avg_loss": -10.27,
+      "best_trade": 6.05,
+      "worst_trade": -10.27,
+      "trades_list": [
+        {
+          "type": "SL",
+          "entry": 396.34596221923823,
+          "exit": 355.6256965705653,
+          "pnl": -10.273919638456809,
+          "date": "2026-03-23"
+        },
+        {
+          "type": "OPEN",
+          "entry": 399.84946221923826,
+          "exit": 424.0255621948242,
+          "pnl": 6.046300485538764,
+          "date": "CURRENT"
+        }
+      ]
+    },
+    {
+      "symbol": "HINDALCO",
+      "trades": 2,
+      "wins": 1,
+      "losses": 1,
+      "test_days": 30,
+      "return": -1.87,
+      "win_rate": 50.0,
+      "final_capital": 98129.0,
+      "avg_win": 6.54,
+      "avg_loss": -7.92,
+      "best_trade": 6.54,
+      "worst_trade": -7.92,
+      "trades_list": [
+        {
+          "type": "SL",
+          "entry": 955.9049622192382,
+          "exit": 880.2024239823957,
+          "pnl": -7.919462836670582,
+          "date": "2026-03-20"
+        },
+        {
+          "type": "OPEN",
+          "entry": 955.4544999999999,
+          "exit": 1017.981,
+          "pnl": 6.544163013518703,
+          "date": "CURRENT"
+        }
+      ]
+    }
+  ]
+}

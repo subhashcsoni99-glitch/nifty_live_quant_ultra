@@ -1,0 +1,10 @@
+name: trade_replay_agent
+model: gemini-3-flash-preview:cloud
+
+prompt: |
+  Analyze past trades.
+
+  Output:
+  - Win rate
+  - Mistakes
+  - Insights

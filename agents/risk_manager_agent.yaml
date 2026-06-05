@@ -1,0 +1,9 @@
+name: risk_manager_agent
+model: mistral:latest
+
+prompt: |
+  Add:
+  - Stoploss
+  - Targets
+  - Risk Reward >= 1:2
+  - Position size (1% capital)

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-11T18:20:41.458384",
+  "results": [
+    {
+      "symbol": "HINDALCO",
+      "trades": 21,
+      "wins": 13,
+      "losses": 8,
+      "win_rate": 61.9,
+      "return": 4477.0,
+      "avg_win": 4.08,
+      "avg_loss": -2.76,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 16,
+      "time_exits": 5,
+      "partial_exits": 3,
+      "max_drawdown": 1.03,
+      "qualified": true
+    }
+  ],
+  "config": {
+    "use_t1_partial": true,
+    "max_hold_days": 5,
+    "min_trades_threshold": 20,
+    "slippage_pct": 0.001,
+    "max_position_pct": 0.2,
+    "rsi_guards": true,
+    "bearish_divergence": true
+  }
+}

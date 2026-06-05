@@ -1,0 +1,515 @@
+{
+  "timestamp": "2026-04-21T11:34:27.567413",
+  "period": {
+    "start": "2024-01-01",
+    "end": "2025-12-31"
+  },
+  "results": {
+    "buy": [
+      {
+        "symbol": "SBIN",
+        "trades": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 25.0,
+        "avg_win": 23.75,
+        "avg_loss": -4.68,
+        "profit_factor": 1.69,
+        "max_drawdown": 0.11,
+        "total_return": 7.2,
+        "final_capital": 107165.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-29",
+            "exit_date": "2024-11-21",
+            "entry": 817.125207824707,
+            "exit": 764.616088256836,
+            "pnl": -6.426080001577372,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2024-11-25",
+            "exit_date": "2024-12-20",
+            "entry": 828.6554032592773,
+            "exit": 796.7608289473219,
+            "pnl": -3.848955088750672,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-04-17",
+            "exit_date": "2025-05-08",
+            "entry": 782.5344993286132,
+            "exit": 753.1088692016601,
+            "pnl": -3.760298127711835,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-05-16",
+            "exit_date": "2025-12-31",
+            "entry": 792.8920755615234,
+            "exit": 981.2178121948242,
+            "pnl": 23.751749126755897,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "TRENT",
+        "trades": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -8.93,
+        "profit_factor": 0.0,
+        "max_drawdown": 2.32,
+        "total_return": -30.2,
+        "final_capital": 69750.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2024-11-05",
+            "entry": 7489.000073242187,
+            "exit": 7019.524197296404,
+            "pnl": -6.268872631250144,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2024-11-29",
+            "exit_date": "2025-01-13",
+            "entry": 6796.307584472655,
+            "exit": 6317.40770037314,
+            "pnl": -7.04647160457607,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-02-01",
+            "exit_date": "2025-02-06",
+            "entry": 6190.326720703124,
+            "exit": 5572.999593713934,
+            "pnl": -9.972448221910192,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-06-30",
+            "exit_date": "2025-07-04",
+            "entry": 6223.7175,
+            "exit": 5450.544,
+            "pnl": -12.423017272233192,
+            "type": "BUY"
+          }
+        ]
+      },
+      {
+        "symbol": "BHEL",
+        "trades": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 50.0,
+        "avg_win": 25.23,
+        "avg_loss": -4.75,
+        "profit_factor": 5.31,
+        "max_drawdown": 0.01,
+        "total_return": 19.3,
+        "final_capital": 119263.0,
+        "trades_list": [
+          {
+            "entry_date": "2025-05-14",
+            "exit_date": "2025-08-07",
+            "entry": 239.09695135498043,
+            "exit": 227.7420312194824,
+            "pnl": -4.749086122239883,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-09-11",
+            "exit_date": "2025-12-31",
+            "entry": 229.3090818328857,
+            "exit": 287.1625621948242,
+            "pnl": 25.229476259514467,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "JSWSTEEL",
+        "trades": 6,
+        "wins": 1,
+        "losses": 5,
+        "win_rate": 16.7,
+        "avg_win": 16.2,
+        "avg_loss": -4.61,
+        "profit_factor": 0.7,
+        "max_drawdown": 0.23,
+        "total_return": -8.4,
+        "final_capital": 91590.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-05",
+            "exit_date": "2024-11-13",
+            "entry": 997.8125505981444,
+            "exit": 936.6656632172962,
+            "pnl": -6.12809363283648,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2024-12-02",
+            "exit_date": "2024-12-19",
+            "entry": 988.1289264526366,
+            "exit": 938.5489827248696,
+            "pnl": -5.017558174899106,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-01-23",
+            "exit_date": "2025-04-07",
+            "entry": 928.3300515747069,
+            "exit": 926.8737731323242,
+            "pnl": -0.15687076378841766,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-04-22",
+            "exit_date": "2025-05-02",
+            "entry": 1042.4370255126953,
+            "exit": 974.733813877459,
+            "pnl": -6.494705193528424,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-05-15",
+            "exit_date": "2025-06-02",
+            "entry": 1036.547108276367,
+            "exit": 982.2431812471488,
+            "pnl": -5.238925138628585,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-06-10",
+            "exit_date": "2025-12-31",
+            "entry": 1001.4064729614257,
+            "exit": 1163.635248779297,
+            "pnl": 16.200092589587275,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "RADICO",
+        "trades": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 50.0,
+        "avg_win": 49.22,
+        "avg_loss": -9.61,
+        "profit_factor": 5.12,
+        "max_drawdown": 0.22,
+        "total_return": 34.0,
+        "final_capital": 133988.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2025-02-14",
+            "entry": 2295.0676772460934,
+            "exit": 2074.4651803321467,
+            "pnl": -9.612025784732104,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-03-06",
+            "exit_date": "2025-12-31",
+            "entry": 2208.25683203125,
+            "exit": 3295.1015024414064,
+            "pnl": 49.21731270770846,
+            "type": "BUY-OPEN"
+          }
+        ]
+      }
+    ],
+    "sell": [
+      {
+        "symbol": "SBICARD",
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "avg_win": 6.64,
+        "avg_loss": -3.04,
+        "profit_factor": 2.19,
+        "max_drawdown": 0.03,
+        "total_return": 6.7,
+        "final_capital": 106668.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-12-05",
+            "exit_date": "2024-12-19",
+            "entry": 720.4404849243164,
+            "exit": 698.1575278930665,
+            "pnl": -3.092962916095807,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-01-06",
+            "exit_date": "2025-07-30",
+            "entry": 726.5070923461914,
+            "exit": 811.0439791259765,
+            "pnl": 11.636071783797822,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-09-10",
+            "exit_date": "2025-11-06",
+            "entry": 852.2686535644531,
+            "exit": 866.2948862915039,
+            "pnl": 1.6457525063709337,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-11-27",
+            "exit_date": "2025-12-04",
+            "entry": 878.203803527832,
+            "exit": 852.0590753173828,
+            "pnl": -2.9770684327969352,
+            "type": "BUY"
+          }
+        ]
+      },
+      {
+        "symbol": "JIOFIN",
+        "trades": 6,
+        "wins": 0,
+        "losses": 6,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -2.9,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.05,
+        "total_return": -16.2,
+        "final_capital": 83818.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-12-03",
+            "exit_date": "2024-12-18",
+            "entry": 340.15991897583007,
+            "exit": 323.77054037475585,
+            "pnl": -4.818139259446013,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-05-27",
+            "exit_date": "2025-06-19",
+            "entry": 291.23723535156245,
+            "exit": 283.3740266418457,
+            "pnl": -2.699932479521302,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-06-26",
+            "exit_date": "2025-09-25",
+            "entry": 312.325471710205,
+            "exit": 302.4726910121416,
+            "pnl": -3.154651666453085,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-10-15",
+            "exit_date": "2025-11-04",
+            "entry": 312.96264389038083,
+            "exit": 303.0021990164402,
+            "pnl": -3.182630600931845,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-11-12",
+            "exit_date": "2025-12-08",
+            "entry": 309.80949999999996,
+            "exit": 299.5096905,
+            "pnl": -3.324562190636499,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-12-31",
+            "exit_date": "2025-12-31",
+            "entry": 295.24496221923823,
+            "exit": 294.6550621948242,
+            "pnl": -0.19980019980018585,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "PIIND",
+        "trades": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "avg_win": 0,
+        "avg_loss": -4.96,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.8,
+        "total_return": -17.9,
+        "final_capital": 82068.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-06",
+            "exit_date": "2024-11-14",
+            "entry": 4591.395402343749,
+            "exit": 4300.381465269795,
+            "pnl": -6.338246035734622,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-06-04",
+            "exit_date": "2025-08-13",
+            "entry": 3958.0375795898435,
+            "exit": 3762.7444753417967,
+            "pnl": -4.934089187406965,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-09-17",
+            "exit_date": "2025-09-25",
+            "entry": 3750.590349365234,
+            "exit": 3563.7710405273438,
+            "pnl": -4.981064084204994,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-11-03",
+            "exit_date": "2025-11-14",
+            "entry": 3682.9338933105464,
+            "exit": 3551.1045205078126,
+            "pnl": -3.5794661707662074,
+            "type": "BUY"
+          }
+        ]
+      },
+      {
+        "symbol": "NATIONALUM",
+        "trades": 7,
+        "wins": 1,
+        "losses": 6,
+        "win_rate": 14.3,
+        "avg_win": 60.66,
+        "avg_loss": -6.47,
+        "profit_factor": 1.56,
+        "max_drawdown": 0.08,
+        "total_return": 7.4,
+        "final_capital": 107382.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-10-24",
+            "exit_date": "2025-01-03",
+            "entry": 209.8867705993652,
+            "exit": 197.1142116138436,
+            "pnl": -6.0854521459582855,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-01-24",
+            "exit_date": "2025-01-30",
+            "entry": 191.49654205322264,
+            "exit": 181.64288232421876,
+            "pnl": -5.145607133869421,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-01-31",
+            "exit_date": "2025-02-11",
+            "entry": 190.5918601989746,
+            "exit": 172.40696452331542,
+            "pnl": -9.541276136700933,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-02-21",
+            "exit_date": "2025-02-25",
+            "entry": 193.4747756347656,
+            "exit": 175.39266568062808,
+            "pnl": -9.34597799367512,
+            "type": "BUY-SL"
+          },
+          {
+            "entry_date": "2025-03-07",
+            "exit_date": "2025-03-13",
+            "entry": 187.85369691467284,
+            "exit": 180.4660665435791,
+            "pnl": -3.9326510430344923,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-07-22",
+            "exit_date": "2025-07-28",
+            "entry": 189.31672158813475,
+            "exit": 180.30276260375976,
+            "pnl": -4.761311578163276,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-09-02",
+            "exit_date": "2025-12-31",
+            "entry": 193.01276623535153,
+            "exit": 310.10239846801755,
+            "pnl": 60.66419051778777,
+            "type": "BUY-OPEN"
+          }
+        ]
+      },
+      {
+        "symbol": "HINDALCO",
+        "trades": 5,
+        "wins": 1,
+        "losses": 4,
+        "win_rate": 20.0,
+        "avg_win": 34.78,
+        "avg_loss": -3.47,
+        "profit_factor": 2.51,
+        "max_drawdown": 0.09,
+        "total_return": 17.0,
+        "final_capital": 117018.0,
+        "trades_list": [
+          {
+            "entry_date": "2024-11-29",
+            "exit_date": "2024-12-17",
+            "entry": 652.074213317871,
+            "exit": 634.1599440307617,
+            "pnl": -2.7472746078944374,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-03-06",
+            "exit_date": "2025-04-03",
+            "entry": 677.6623369140624,
+            "exit": 647.2507829589844,
+            "pnl": -4.487714942749529,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-05-15",
+            "exit_date": "2025-05-30",
+            "entry": 657.1918135986327,
+            "exit": 628.2591734619141,
+            "pnl": -4.402465085237458,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-06-11",
+            "exit_date": "2025-06-13",
+            "entry": 651.0804837646484,
+            "exit": 636.4904968872071,
+            "pnl": -2.240888375747306,
+            "type": "BUY"
+          },
+          {
+            "entry_date": "2025-06-23",
+            "exit_date": "2025-12-31",
+            "entry": 657.2415458984374,
+            "exit": 885.8133121948242,
+            "pnl": 34.77743726378912,
+            "type": "BUY-OPEN"
+          }
+        ]
+      }
+    ]
+  }
+}

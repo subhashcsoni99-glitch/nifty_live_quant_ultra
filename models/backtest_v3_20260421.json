@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-04-21T12:10:50.915867",
+  "period": {
+    "start": "2024-01-01",
+    "end": "2025-12-31"
+  },
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 6,
+      "wins": 3,
+      "losses": 3,
+      "win_rate": 50.0,
+      "return": 10.4,
+      "avg_win": 7.05,
+      "avg_loss": -3.53,
+      "best_trade": 17.99,
+      "worst_trade": -4.52
+    },
+    {
+      "symbol": "TRENT",
+      "trades": 6,
+      "wins": 2,
+      "losses": 4,
+      "win_rate": 33.3,
+      "return": -16.0,
+      "avg_win": 1.94,
+      "avg_loss": -5.65,
+      "best_trade": 2.62,
+      "worst_trade": -9.97
+    },
+    {
+      "symbol": "BHEL",
+      "trades": 3,
+      "wins": 1,
+      "losses": 2,
+      "win_rate": 33.3,
+      "return": 37.3,
+      "avg_win": 6.58,
+      "avg_loss": -2.68,
+      "best_trade": 6.58,
+      "worst_trade": -3.36
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "trades": 9,
+      "wins": 2,
+      "losses": 7,
+      "win_rate": 22.2,
+      "return": -14.5,
+      "avg_win": 4.05,
+      "avg_loss": -4.17,
+      "best_trade": 5.31,
+      "worst_trade": -6.62
+    },
+    {
+      "symbol": "RADICO",
+      "trades": 6,
+      "wins": 4,
+      "losses": 2,
+      "win_rate": 66.7,
+      "return": 19.0,
+      "avg_win": 7.3,
+      "avg_loss": -5.4,
+      "best_trade": 10.88,
+      "worst_trade": -7.69
+    },
+    {
+      "symbol": "SBICARD",
+      "trades": 9,
+      "wins": 5,
+      "losses": 4,
+      "win_rate": 55.6,
+      "return": 27.1,
+      "avg_win": 7.6,
+      "avg_loss": -2.85,
+      "best_trade": 17.32,
+      "worst_trade": -6.42
+    },
+    {
+      "symbol": "JIOFIN",
+      "trades": 6,
+      "wins": 1,
+      "losses": 5,
+      "win_rate": 16.7,
+      "return": -14.1,
+      "avg_win": 1.62,
+      "avg_loss": -3.31,
+      "best_trade": 1.62,
+      "worst_trade": -3.68
+    },
+    {
+      "symbol": "PIIND",
+      "trades": 6,
+      "wins": 1,
+      "losses": 5,
+      "win_rate": 16.7,
+      "return": -15.6,
+      "avg_win": 2.79,
+      "avg_loss": -3.93,
+      "best_trade": 2.79,
+      "worst_trade": -6.94
+    },
+    {
+      "symbol": "NATIONALUM",
+      "trades": 8,
+      "wins": 0,
+      "losses": 8,
+      "win_rate": 0.0,
+      "return": 2.5,
+      "avg_win": 0,
+      "avg_loss": -4.52,
+      "best_trade": -1.39,
+      "worst_trade": -7.86
+    },
+    {
+      "symbol": "HINDALCO",
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 25.0,
+      "return": 14.8,
+      "avg_win": 13.17,
+      "avg_loss": -2.18,
+      "best_trade": 13.17,
+      "worst_trade": -4.24
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-04-20T22:43:58.521928",
+  "parameters": {
+    "quantile": 0.3,
+    "horizon": 5,
+    "trials": 40,
+    "min_accuracy": 0.6
+  },
+  "results": {
+    "buy": [
+      {
+        "symbol": "SBIN",
+        "current_price": 1107.85,
+        "entry": 1108.96,
+        "stoploss": 1085.69,
+        "target1": 1141.09,
+        "target2": 1174.32,
+        "model_accuracy": 92.3,
+        "net_trades": 7
+      },
+      {
+        "symbol": "TRENT",
+        "current_price": 4242.8,
+        "entry": 4247.04,
+        "stoploss": 4157.94,
+        "target1": 4370.08,
+        "target2": 4497.37,
+        "model_accuracy": 88.9,
+        "net_trades": 0
+      },
+      {
+        "symbol": "BAJFINANCE",
+        "current_price": 917.75,
+        "entry": 918.67,
+        "stoploss": 899.4,
+        "target1": 945.28,
+        "target2": 972.82,
+        "model_accuracy": 70.0,
+        "net_trades": 5
+      },
+      {
+        "symbol": "ICICIBANK",
+        "current_price": 1356.2,
+        "entry": 1357.56,
+        "stoploss": 1329.08,
+        "target1": 1396.89,
+        "target2": 1437.57,
+        "model_accuracy": 71.4,
+        "net_trades": 4
+      },
+      {
+        "symbol": "NTPC",
+        "current_price": 398.0,
+        "entry": 398.4,
+        "stoploss": 390.04,
+        "target1": 409.94,
+        "target2": 421.88,
+        "model_accuracy": 75.0,
+        "net_trades": -4
+      }
+    ],
+    "sell": [
+      {
+        "symbol": "JIOFIN",
+        "current_price": 237.15,
+        "entry": 236.91,
+        "stoploss": 241.89,
+        "target1": 230.04,
+        "target2": 222.92,
+        "model_accuracy": null,
+        "net_trades": -8
+      },
+      {
+        "symbol": "HINDALCO",
+        "current_price": 1015.25,
+        "entry": 1014.23,
+        "stoploss": 1035.56,
+        "target1": 984.79,
+        "target2": 954.33,
+        "model_accuracy": 36.4,
+        "net_trades": 6
+      },
+      {
+        "symbol": "HDFCBANK",
+        "current_price": 795.45,
+        "entry": 794.65,
+        "stoploss": 811.36,
+        "target1": 771.59,
+        "target2": 747.72,
+        "model_accuracy": 100.0,
+        "net_trades": -6
+      },
+      {
+        "symbol": "HCLTECH",
+        "current_price": 1428.3,
+        "entry": 1426.87,
+        "stoploss": 1456.87,
+        "target1": 1385.45,
+        "target2": 1342.6,
+        "model_accuracy": 75.0,
+        "net_trades": -4
+      },
+      {
+        "symbol": "TECHM",
+        "current_price": 1504.4,
+        "entry": 1502.9,
+        "stoploss": 1534.49,
+        "target1": 1459.27,
+        "target2": 1414.14,
+        "model_accuracy": 88.9,
+        "net_trades": -2
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+name: learning_agent
+model: minimax-m2.7:cloud
+
+prompt: |
+  Improve strategy based on past trades.
+
+  Output:
+  - New rules
+  - Avoid patterns

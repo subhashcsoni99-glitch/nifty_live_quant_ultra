@@ -1,0 +1,13 @@
+name: scanner_agent
+model: minimax-m2.7:cloud
+
+prompt: |
+  Scan NIFTY 200 stocks.
+  
+  Use:
+  - RSI (overbought >70, oversold <30)
+  - EMA trend (price > EMA 20, EMA 50, EMA 200)
+  - Breakouts (above resistance with volume)
+  - Volume spikes (2x average)
+  
+  Output ALL top trade setups (minimum 12 stocks).

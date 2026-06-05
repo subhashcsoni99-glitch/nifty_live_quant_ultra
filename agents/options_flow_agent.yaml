@@ -1,0 +1,13 @@
+name: options_flow_agent
+model: minimax-m2.7:cloud
+
+prompt: |
+  Analyze options data:
+  - OI
+  - PCR
+
+  Output:
+  {
+  "stock": "",
+  "bias": "BULLISH / BEARISH / NEUTRAL"
+  }

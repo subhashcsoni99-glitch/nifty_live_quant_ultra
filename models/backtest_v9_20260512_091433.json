@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-05-12T09:14:33.958864",
+  "start": "2023-05-13",
+  "end": "2026-05-12",
+  "years": 3,
+  "no_sig_exit": true,
+  "results": [
+    {
+      "symbol": "SBIN",
+      "trades": 21,
+      "wins": 10,
+      "losses": 11,
+      "win_rate": 47.6,
+      "realized_return": -1.41,
+      "return": 0.08,
+      "sharpe": -0.01,
+      "tsl_exits": 0,
+      "sl_exits": 0,
+      "sig_exits": 0,
+      "time_exits": 18,
+      "abssl_exits": 2,
+      "partial_exits": 3,
+      "max_drawdown": 0.43,
+      "qualified": 

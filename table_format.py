@@ -25,7 +25,6 @@ def run_table_format(results, today):
     bear_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BEARISH')
     regime = "BULLISH" if bullish_count > bear_count else ("BEARISH" if bear_count > bullish_count else "NEUTRAL")
     regime_icon = "🟢" if regime == "BULLISH" else "🔴" if regime == "BEARISH" else "🟡"
-    regime_animal = "🐂" if regime == "BULLISH" else "🐻" if regime == "BEARISH" else "➡️"
 
     cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = _categorize(results, regime=regime)
 
@@ -54,8 +53,9 @@ def run_table_format(results, today):
             return f"\n{emoji} {label} [0]\n"
         sorted_s = sorted(cat_list, key=lambda x: (-x.get('prob', 0), -x.get('_confluence', 0)))[:max_rows]
         out = f"\n{emoji} {label} [{len(cat_list)}]\n"
-        out += "| # | Stock         | Price      | Conf% |   RSI | AI      | Entry     | SL        | T1        | T2        |\n"
-        out += f"|---|---------------|------------|-------|-------|---------|-----------|-----------|-----------|-----------|\n"
+        # v21: RSI padded (6 chars), Entry(CMP) 14 chars, all price cols 12 chars
+        out += "| # | Stock         | Price      | Conf% |  RSI  | AI       | Entry(CMP)   | SL          | T1          | T2          |\n"
+        out += "|---|--------------|------------|-------|------|----------|---------------|--------------|--------------|--------------|\n"
         for i, r in enumerate(sorted_s, 1):
             star = "🏅 " if r.get('_starred') else ""
             ai_data = r.get('ai', {})
@@ -71,9 +71,9 @@ def run_table_format(results, today):
             sl = id_l['sl']
             t1 = id_l['t1']
             t2 = id_l['t2']
-            row = (f"| {i} | {star}{r['symbol']:<11}{bear_sym} | ₹{price:>8.0f} | "
-                   f"{prob:>4}% | {rsi:>5.1f} | {ai_color}{ai_score_str:<5} | "
-                   f"₹{entry:>8.0f} | ₹{sl:>8.0f} | ₹{t1:>8.0f} | ₹{t2:>8.0f} |")
+            row = (f"| {i} | {star}{r['symbol']:<12}{bear_sym} | ₹{price:>10.0f} | "
+                   f"{prob:>5}% | {rsi:>6.1f} | {ai_color}{ai_score_str:<6} | "
+                   f"₹{entry:>13.0f} | ₹{sl:>12.0f} | ₹{t1:>12.0f} | ₹{t2:>12.0f} |")
             out += row + "\n"
         return out
 
@@ -82,8 +82,8 @@ def run_table_format(results, today):
             return f"\n{emoji} {label} [0]\n"
         sorted_s = sorted(cat_list, key=lambda x: (-x.get('prob', 0), -x.get('_confluence', 0)))[:max_rows]
         out = f"\n{emoji} {label} [{len(cat_list)}]\n"
-        out += "| Stock         | Price      | Conf% |   RSI | AI      | Entry     | SL        | T1        | T2        | Warning |\n"
-        out += f"|---------------|------------|-------|-------|---------|-----------|-----------|-----------|-----------|---------|\n"
+        out += "| Stock          | Price      | Conf% |  RSI  | AI       | Entry(CMP)   | SL          | T1          | T2          | Warning   |\n"
+        out += "|----------------|------------|-------|------|----------|---------------|--------------|--------------|--------------|-----------|\n"
         for r in sorted_s:
             star = "🏅 " if r.get('_starred') else ""
             ai_data = r.get('ai', {})
@@ -101,16 +101,16 @@ def run_table_format(results, today):
             sl = id_l['sl']
             t1 = id_l['t1']
             t2 = id_l['t2']
-            row = (f"| {star}{r['symbol']:<11}{bear_sym} | ₹{price:>8.0f} | "
-                   f"{prob:>4}% | {rsi:>5.1f} | {ai_color}{ai_score_str:<5} | "
-                   f"₹{entry:>8.0f} | ₹{sl:>8.0f} | ₹{t1:>8.0f} | ₹{t2:>8.0f} | {tag_str} |")
+            row = (f"| {star}{r['symbol']:<12}{bear_sym} | ₹{price:>10.0f} | "
+                   f"{prob:>5}% | {rsi:>6.1f} | {ai_color}{ai_score_str:<6} | "
+                   f"₹{entry:>13.0f} | ₹{sl:>12.0f} | ₹{t1:>12.0f} | ₹{t2:>12.0f} | {tag_str:<9} |")
             out += row + "\n"
         return out
 
     # BUILD OUTPUT
     buy_count = len(buy)
     sell_count = len(sell)
-    out = f"📊 NIFTY SCANNER v19 (+AI/ML) | {today}\n\n"
+    out = f"📊 NIFTY SCANNER v21 (+AI/ML) | {today}\n\n"
     out += f"📉 REGIME: {regime} {regime_icon} (BUY={buy_count} vs SELL={sell_count})\n\n"
 
     # Cat A — Top Picks (both BUY and SELL)
@@ -153,9 +153,17 @@ def run_table_format(results, today):
     if cat_c2_sell:
         out += fmt_cat_warn_table(cat_c2_sell, "CATEGORY C — SIGNAL ONLY (SHORT)", "🟡", "SELL")
 
-    # Cat D
-    if cat_d:
-        out += fmt_cat_warn_table(cat_d, "CATEGORY D — SELL (82%)", "🟣", "SELL")
+    # Cat D — ML Signal Only
+    cat_d_buy = [r for r in cat_d if r['signal'] == 'BUY']
+    cat_d_sell = [r for r in cat_d if r['signal'] == 'SELL']
+    if cat_d_buy:
+        out += fmt_cat_warn_table(cat_d_buy, "CATEGORY D — ML SIGNAL ONLY (BUY)", "🟣", "BUY")
+    if cat_d_sell:
+        out += fmt_cat_warn_table(cat_d_sell, "CATEGORY D — ML SIGNAL ONLY (SHORT)", "🟣", "SELL")
+
+    # Watchlist
+    if watchlist:
+        out += fmt_cat_warn_table(watchlist, "WATCHLIST — RANGE BOUND", "📋", "BUY")
 
     out += f"\n⚠️ Not SEBI registered. Validate before trading."
     return out

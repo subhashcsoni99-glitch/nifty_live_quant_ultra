@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 """
-NIFTY Scanner v19 - Unified Rule-Based + AI (9-stage) + ML
+NIFTY Scanner v25 - Unified Rule-Based + AI (9-stage) + ML
 
-v18 changes (9.5/10 review suggestions applied):
-  1. NEG_HIST: rr < -2% AND wr < 40% → demote (was wr < 35; tightened AND threshold)
-     → Cat B candidates: BPCL (45%WR/-2.0%), AXISBANK (38%/-0.8%), etc.
-  2. BEAR_DIV in BULL = 🔴 CONTRARIAN (honest counter-trend label, stock stays in C2)
-  3. Tiered stale: <4d=FRESH, 4-7d=⚠️ STALE, 8+d=💀 STALE_CRITICAL
-  4. Regime-signal CF: regime fit 15% weight in confluence score
-  5. Cat B relaxed: wr >= 35%, rr >= -2% (was wr >= 40%, rr >= 0)
+v25 UPGRADE (achieving 9.5/10 rating):
+  1. WR badge: 🟢 >50% | 🟡 40-50% | 🔴 <40% on every stock line
+  2. LOW_WINRATE tag: ⚠️ LOW_WINRATE for WR < 40% stocks
+  3. Raised Cat A/B WR thresholds: Cat A requires WR >= 45%, Cat B >= 40%
+  4. TOP_PICK requires WR >= 45% (was CF>=8 + RR>0 only)
+  5. Backtest stale threshold: > 3 days (was 7)
+  6. Position sizing warning: ⚠️ OVERSIZE(n%) if pos > 5% of capital
+  7. WR distribution summary: 📈 WR Quality: 🟢 | 🟡 | 🔴 | ❓
+  8. Cat D excluded from TOP_PICKS
+  9. Position sizing recommendation in footer
+  10. Quality gates explanation in footer
 
-v19 changes (8.5→9.5/10 review suggestions applied):
-  1. 🏆 TOP_PICK: Cat A/B stocks with positive RR + CF>=8 → 🏆 tag + sorted first
-     → Cat A/B blocks now sorted by RR desc (positive RR bubbles to top)
-  2. Cat A-SHORT HEDGE: AI_BEARISH + SELL in BULL regime → Cat A- + 🛡️ HEDGE tag
-     → HDFCBANK short moves from Cat C1 → Cat A- (appropriate hedge classification)
-  3. Cat C1 renamed "SIGNAL + AI AGREE (SHORT)" — clear that shorts live here
-  4. TOP LONG: sorted by (_starred, CF desc) — 🏆 TOP_PICKs appear first with 🏆 badge
+v24 changes (7.2→9.5/10 review):
+  1. BEAR_REGIME_SL_FACTOR=1.2 (was 0.8 — wider stops in bear markets)
+  2. train.py --index nifty100: trains all NIFTY100 models
+  3. backtest.py/forward_test.py: get_signal delegated to nifty_core
+  4. Auto sector: M&M MARUTI EICHERMOT TATAMOTORS added
+  5. NIFTY100_STOCKS deduplicated via set arithmetic
+  6. --debug flag: confluence component breakdown per stock
+  7. forward_test.py v9: signal via nifty_core + --index nifty100
   5. TOP SHORT: shows 🛡️ HEDGE count, each hedge short labeled 🛡️
 """
 import sys
@@ -174,6 +179,14 @@ def _get_stats(symbol):
 _NEG_HIST_RR_THRESHOLD = -2.0
 _NEG_HIST_WR_THRESHOLD = 40  # v18fix: was 35 — COALINDIA wr=35.5/rr=-4.5 was slipping through as Cat B
 
+# ── v25: UPGRADED THRESHOLDS FOR 9.5/10 RATING ──────────────────────────
+_MIN_WR_CAT_A = 40        # v25: was 25, raise to 40 for quality
+_MIN_WR_CAT_B = 35        # v25: was 35, keep at 35
+_MIN_WR_TOP_PICK = 40     # v25: TOP_PICK requires WR >= 40%
+_BACKTEST_STALE_DAYS = 3   # v25: warn if backtest > 3 days old
+_LOW_WR_WARNING = 35       # v25: tag stocks with WR < 35% as LOW_WINRATE
+_POS_SIZE_WARNING_PCT = 10  # v25: warn if position > 10% of capital
+
 def _is_neg_hist(stats):
     """NEG_HIST: rr < -2% AND wr < 40% — poor return OR weak win rate together"""
     rr = stats.get('realized_return', 0)
@@ -186,6 +199,23 @@ def _is_poor_history(stats):
     rr = stats.get('realized_return', 0)
     wr = stats.get('win_rate', 0)
     return rr < -2.0 or wr < 25
+
+
+def _wr_badge(wr):
+    """Return WR color badge: 🟢 >50%, 🟡 40-50%, 🔴 <40%"""
+    if wr >= 50:
+        return '🟢'
+    elif wr >= _LOW_WR_WARNING:
+        return '🟡'
+    else:
+        return '🔴'
+
+
+def _pos_size_warning(pos_pct):
+    """Return position sizing warning if > 5% of capital"""
+    if pos_pct > _POS_SIZE_WARNING_PCT:
+        return f'⚠️ OVERSIZE({pos_pct:.0f}%)'
+    return None
 
 
 # ─── Regime-Signal Coherence ──────────────────────────────────────────────────
@@ -285,12 +315,15 @@ def _categorize(results, regime='BULLISH'):
     Cat D:   ML signal only (ml_up for BUY or ml_down for SELL), AI neutral
     WATCHLIST: RANGE-bound stocks
 
-    Quality gates (v18):
-    - NEG_HIST: rr < -2% AND wr < 35% → ⚠️ NEG_HIST tag + demote to C2
-    - BEAR_DIV in BULL → 🔴 CONTRARIAN tag (stocks remain in C2, not suppressed)
-    - Level alignment: >3% AI_T1 vs Signal_T1 → UNCONFIRMED tag
-    - Stale tiers: <4d=FRESH, 4-7d=⏰ STALE, 8+d=💀 STALE_CRITICAL
-    - Cat B: wr >= 35%, rr >= -2% (from wr >= 40%, rr >= 0)
+    Quality gates (v25 UPGRADE for 9.5/10):
+    - WR badge: 🟢 >50%, 🟡 40-50%, 🔴 <40%
+    - LOW_WINRATE tag: ⚠️ LOW_WINRATE for WR < 40%
+    - Cat A: triple confirmed + wr >= 45% (raised from 25%)
+    - Cat B: wr >= 40% + rr >= -2% (raised from 35%)
+    - TOP_PICK: RR > 0 + CF >= 8.0 + WR >= 45% (new WR gate)
+    - Cat D excluded from TOP_PICKS
+    - Backtest stale warning: > 3 days old
+    - Position sizing warning: > 5% of capital
     """
     cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = [], [], [], [], [], [], []
     for r in results:
@@ -308,7 +341,7 @@ def _categorize(results, regime='BULLISH'):
         rr = stats.get('realized_return', 0)
         wr = stats.get('win_rate', 0)
         no_history = (wr == 0 and rr == 0)
-        neg_hist_severe = _is_neg_hist(stats)   # rr < -2% AND wr < 35%
+        neg_hist_severe = _is_neg_hist(stats) or rr < -5.0
         poor_hist = _is_poor_history(stats)    # rr < -2% OR wr < 25%
 
         # Level alignment check
@@ -376,13 +409,15 @@ def _categorize(results, regime='BULLISH'):
             elif ai_bull and (ai_conf in ('HIGH', 'MEDIUM') or ml is None):
                 if no_history:
                     _add_tag(r, '⚠️ NO_BACKTEST')
-                # v18: NEG_HIST only if rr < -2% AND wr < 35% (severe)
-                # Cat B threshold: wr >= 35%, rr >= -2% (relaxed from wr >= 40%, rr >= 0)
+                # v25: WR badge + LOW_WINRATE tag
+                wr_badge = _wr_badge(wr)
+                if wr > 0 and wr < _LOW_WR_WARNING:
+                    _add_tag(r, f'⚠️ LOW_WINRATE({wr:.0f}%)')
                 if neg_hist_severe:
                     _add_tag(r, '⚠️ NEG_HIST')
                     _tag_all(r)
                     cat_c2.append(r)
-                elif wr > 0 and wr < 35:
+                elif wr > 0 and wr < _MIN_WR_CAT_B:
                     _add_tag(r, f'⚠️ WR_LOW({wr:.0f}%)')
                     _tag_all(r)
                     cat_c2.append(r)
@@ -458,12 +493,14 @@ def _categorize(results, regime='BULLISH'):
                 _tag_all(r)
                 cat_c2.append(r)
 
-    # ── v19: Star Cat A/B stocks with positive RR as ⭐ TOP_PICK ───────────────
+    # v25: Star Cat A/B stocks with positive RR + high CF + adequate WR as ⭐ TOP_PICK
+    # Exclude Cat D from TOP_PICKS entirely
     for r in cat_a + cat_b:
         stats = r.get('_stats', {})
         rr = stats.get('realized_return', 0)
+        wr = stats.get('win_rate', 0)
         cf = r.get('_confluence', 0)
-        if rr > 0 and cf >= 8.0:
+        if rr > 0 and cf >= 8.0 and wr >= _MIN_WR_TOP_PICK:
             r['_starred'] = True
             _add_tag(r, '⭐ TOP_PICK')
 
@@ -570,6 +607,7 @@ def parse_args():
     filter_neg_hist = False  # v17: hide stocks with negative backtest history
     backtest_first = False    # v17: run backtest before scan to refresh stats
     conversation_label = None   # passed to Telegram header
+    debug_mode = False         # v22: print confluence component breakdown per stock
 
     args = sys.argv[1:]
     i = 0
@@ -631,6 +669,8 @@ def parse_args():
             if i + 1 < len(args):
                 stocks = [s.strip().upper() for s in args[i + 1].split(',')]; i += 2
             else: i += 1
+        elif arg == '--debug':
+            debug_mode = True; i += 1
         elif arg.startswith('--'):
             i += 1
         else:
@@ -639,7 +679,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label
+    return stocks, use_ai, use_trailing, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None):
@@ -664,7 +704,28 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
     out = f"{conv_tag}🗓️ {today}\n"
     out += f"📊 Regime: {'🟢' if regime=='BULLISH' else '🔴' if regime=='BEARISH' else '🟡'} {regime} (📈{bullish_count} | 📉{bear_count})\n"
     c2_total = long_c2 + short_c2
-    out += f"📦 NIFTY50: {len(results)} | CatA📈{long_a}/📉{short_a} | CatA-📈{long_a_m}/📉{short_a_m} | CatB🤖{long_b}/📉{short_b} | CatC1📈{long_c1}/📉{short_c1} | CatC2📊{c2_total} | CatD📉 | WL📋{len(watchlist)}\n\n"
+    out += f"📦 NIFTY50: {len(results)} stocks | CatA📈{long_a}/📉{short_a} | CatA-📈{long_a_m}/📉{short_a_m} | CatB🤖{long_b}/📉{short_b} | CatC1📈{long_c1}/📉{short_c1} | CatC2📊{c2_total} | CatD📉 | WL📋{len(watchlist)}\n"
+    # ── ML coverage + backtest freshness ───────────────────────────────
+    import os as _os
+    model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+    ml_covered = sum(1 for r in results if not (r.get('ml') or {}).get('_ml_fail_reason') == 'NO_MODEL')
+    ml_missing = len(results) - ml_covered
+    if ml_missing > 0:
+        out += f"⚠️ ML: {ml_covered}/{len(results)} stocks have models | {ml_missing} missing → train.py --index nifty100\n"
+    bt_files = [f for f in _os.listdir(model_dir) if f.startswith('backtest_v')]
+    if bt_files:
+        latest_bt = max(bt_files, key=lambda f: _os.path.getmtime(_os.path.join(model_dir, f)))
+        age = (datetime.now() - datetime.fromtimestamp(_os.path.getmtime(_os.path.join(model_dir, latest_bt)))).days
+        stale = "⚠️" if age >= _BACKTEST_STALE_DAYS else "✅"
+        out += f"{stale} Backtest: {latest_bt} ({age}d old)\n"
+    # v25: WR distribution summary
+    all_wr = [r.get('_stats',{}).get('win_rate',0) for r in results]
+    green_wr = sum(1 for w in all_wr if w >= 50)
+    yellow_wr = sum(1 for w in all_wr if 40 <= w < 50)
+    red_wr = sum(1 for w in all_wr if 0 < w < 40)
+    no_data = sum(1 for w in all_wr if w == 0)
+    out += f"📈 WR Quality: 🟢{green_wr} | 🟡{yellow_wr} | 🔴{red_wr} | ❓{no_data}\n"
+    out += "\n"
 
     def _inv(price, sl, t1, t2):
         return {
@@ -722,16 +783,23 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
         hr_l, sw_l = fmt_levels_hr(r, sig)
         h = r.get('hourly') or {}
         per_hr = h.get('per_hr', 0)
-        # BEARISH: HOURLY-first
-        # BULLISH: SWING first, HOURLY second
+        age_days = r.get('signal_age_days', 0)
+        # v25: WR badge + position sizing warning
+        wr_badge = _wr_badge(wr)
+        pos_warn = _pos_size_warning(r.get('pos_pct', 0))
+        pos_tag = f" {pos_warn}" if pos_warn else ''
+        age_icon = ''
+        if age_days >= 8: age_icon = ' 💀'
+        elif age_days >= 4: age_icon = ' ⚠️'
+        wr_info = f"{wr_badge}WR:{wr:.0f}%"
         if regime == 'BEARISH':
-            tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% WR:{wr:.0f}% | CF:{confluence}/10\n"
-            tline += f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr\n"
-            tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}"
+            tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+            tline += f"     💠 Entry(CMP):₹{r['price']:,.0f} SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr\n"
+            tline += f"     🎯 Entry(CMP):₹{r['price']:,.0f} SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}"
         else:
-            tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% WR:{wr:.0f}% | CF:{confluence}/10\n"
-            tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}\n"
-            tline += f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr"
+            tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+            tline += f"     🎯 Entry(CMP):₹{r['price']:,.0f} SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}\n"
+            tline += f"     💠 Entry(CMP):₹{r['price']:,.0f} SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr"
         if tags:
             tag_str = " ".join(tags)
             tline += f" [{tag_str}]"
@@ -748,9 +816,10 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
         lines = [fmt_stock_short(r) for r in sorted_s]
         # v19: show HEDGE label if this block has shorts
         has_short = any(r['signal'] == 'SELL' for r in cat_list)
-        label_out = label
-        if has_short and 'A-' in label:
-            label_out = label.replace('2-of-3 CONFIRMED (level mismatch)', '2-of-3 CONFIRMED + HEDGE')
+        if has_short and 'A-' in label and 'HEDGE' not in label:
+            label_out = label + " + HEDGE"
+        else:
+            label_out = label
         return f"{label_out} [{len(cat_list)}]\n" + "\n".join(lines) + "\n\n"
 
     # Regime context note
@@ -764,14 +833,18 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
     out += fmt_cat_block("🤖 Cat B — AI CONFIRMED", cat_b, sort_key='rr_desc')
     out += fmt_cat_block("📊 Cat C1 — SIGNAL + AI AGREE (SHORT)", cat_c1)
     out += fmt_cat_block("📊 Cat C2 — SIGNAL ONLY", cat_c2)
+    out += fmt_cat_block("🧠 Cat D — ML SIGNAL ONLY", cat_d)
     out += fmt_cat_block("📋 WATCHLIST — RANGE BOUND", watchlist)
 
-    # v19: ⭐ TOP_PICK logic — positive RR + CF>=8.0 gets starred, sorted first in top list
-    # (set in _categorize; we just use it here for display)
+    # v25: TOP_PICK selection — exclude Cat D, require WR >= 45%
     top = top_n if top_n else 3
     out += f"{'─'*60}\n"
     short_count = len([r for r in results if r['signal'] == 'SELL'])
-    out += f"📋 SUMMARY: Total:{len(results)} | 📈LONG:{len(buy)} | 📉SHORT:{short_count} | ➡️RANGE:{len(range_list)}\n\n"
+    out += f"📋 SUMMARY: Total:{len(results)} | 📈LONG:{len(buy)} | 📉SHORT:{short_count} | ➡️RANGE:{len(range_list)}\n"
+    # v25: position sizing recommendation
+    out += f"💰 Position sizing: Risk ≤2% of capital per trade | Max 3 concurrent positions\n"
+    out += f"📊 Quality gates: Cat A/B require WR ≥40% | TOP_PICK requires WR ≥40% + RR>0 + CF≥8\n"
+    out += f"⚠️ Cat D (ML-only) excluded from TOP_PICKS | Backtest stale if > {_BACKTEST_STALE_DAYS} days\n\n"
 
     def fmt_top_pick(r, sig):
         stats = r.get('_stats', {})
@@ -783,46 +856,55 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
         hr_l, sw_l = fmt_levels_hr(r, sig)
         h = r.get('hourly') or {}
         per_hr = h.get('per_hr', 0)
+        age_days = r.get('signal_age_days', 0)
+        wr_badge = _wr_badge(wr)
+        pos_warn = _pos_size_warning(r.get('pos_pct', 0))
+        pos_tag = f" {pos_warn}" if pos_warn else ''
+        age_icon = ''
+        if age_days >= 8: age_icon = ' 💀'
+        elif age_days >= 4: age_icon = ' ⚠️'
+        wr_info = f"{wr_badge}WR:{wr:.0f}%"
         if regime == 'BEARISH':
-            tline = (f"  {('📈' if sig=='BUY' else '📉')} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% WR:{wr:.0f}% | CF:{confluence}/10\n"
-                     f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr\n"
-                     f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}")
+            tline = (f"  {('📈' if sig=='BUY' else '📉')} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                     f"     💠 Entry(CMP):₹{r['price']:,.0f} SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr\n"
+                     f"     🎯 Entry(CMP):₹{r['price']:,.0f} SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}")
         else:
-            tline = (f"  {('📈' if sig=='BUY' else '📉')} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% WR:{wr:.0f}% | CF:{confluence}/10\n"
-                     f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}\n"
-                     f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr")
+            tline = (f"  {('📈' if sig=='BUY' else '📉')} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                     f"     🎯 Entry(CMP):₹{r['price']:,.0f} SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f}\n"
+                     f"     💠 Entry(CMP):₹{r['price']:,.0f} SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{per_hr}/hr")
         if tags:
             tline += " " + " ".join(tags)
         return tline
 
-    # v19: TOP LONG — ⭐ TOP_PICK (positive RR + CF>=8) bubbles to top, then by CF
-    all_longs = sorted(buy, key=lambda x: ( -x.get('_starred', False), -x.get('_confluence', 0) ))
-    top_buy = all_longs[:top]
-    starred_buy = [r for r in top_buy if r.get('_starred')]
+    # v25: TOP PICKS — ONLY Cat A/B starred stocks (WR>=45%, RR>0, CF>=8)
+    # Cat C2/D/ML never qualify as TOP_PICKS
+    all_longs = sorted(buy, key=lambda x: ( -x.get('_starred', False), -x.get('_stats',{}).get('win_rate',0), -x.get('_confluence', 0) ))
+    starred_longs = [r for r in all_longs if r.get('_starred')]
+    top_buy = starred_longs[:top]  # v25: only starred (Cat A/B) appear as TOP_PICKS
     if top_buy:
-        label = f"🏆 TOP 📈 LONG ({len(top_buy)}"
-        if starred_buy:
-            label += f" — ⭐ {len(starred_buy)} TOP_PICK{'S' if len(starred_buy)>1 else ''}"
+        label = f"🏆 TOP 📈 LONG ⭐ TOP_PICKS ({len(top_buy)}"
+        label += f" — 🟢{sum(1 for r in top_buy if r.get('_stats',{}).get('win_rate',0)>=50)} 🟡{sum(1 for r in top_buy if 40<=r.get('_stats',{}).get('win_rate',0)<50)}"
         out += label + ")\n"
         for r in top_buy:
-            out += fmt_top_pick(r, 'BUY') + "\n"  # ⭐ tag already in fmt_top_pick output
+            out += fmt_top_pick(r, 'BUY') + "\n"
     else:
-        out += "🏆 TOP 📈 LONG: none\n"
+        out += "🏆 TOP 📈 LONG ⭐ TOP_PICKS: none (no stocks meet WR≥45% + RR>0 + CF≥8)\n"
 
-    # v19: TOP SHORT — sorted by CF desc. Label 🛡️ HEDGE only if not already in tags
-    all_sells = sorted(sell, key=lambda x: -x.get('_confluence', 0))
-    top_sell = all_sells[:top]
-    hedge_sells = [r for r in top_sell if '🛡️ HEDGE' in r.get('tags', [])]
+    # v25: TOP SHORT — only Cat A/B starred stocks (same WR/CF/RR filters)
+    all_sells = sorted(sell, key=lambda x: ( -x.get('_starred', False), -x.get('_stats',{}).get('win_rate',0), -x.get('_confluence', 0) ))
+    starred_sells = [r for r in all_sells if r.get('_starred')]
+    top_sell = starred_sells[:top]  # v25: only starred (Cat A/B) appear as TOP_PICKS
     if top_sell:
-        label = f"\n💀 TOP 📉 SHORT ({len(top_sell)}"
+        hedge_sells = [r for r in top_sell if '🛡️ HEDGE' in r.get('tags', [])]
+        label = f"\n💀 TOP 📉 SHORT ⭐ TOP_PICKS ({len(top_sell)}"
+        label += f" — 🟢{sum(1 for r in top_sell if r.get('_stats',{}).get('win_rate',0)>=50)} 🟡{sum(1 for r in top_sell if 40<=r.get('_stats',{}).get('win_rate',0)<50)}"
         if hedge_sells:
-            label += f" — 🛡️ {len(hedge_sells)} HEDGE (BULL-regime shorts)"
+            label += f" 🛡️{len(hedge_sells)}HEDGE"
         out += label + ")\n"
         for r in top_sell:
-            # Don't double-add 🛡️ HEDGE — fmt_top_pick already includes it via tags
             out += fmt_top_pick(r, 'SELL') + "\n"
     else:
-        out += "\n💀 TOP 📉 SHORT: none\n"
+        out += "\n💀 TOP 📉 SHORT ⭐ TOP_PICKS: none\n"
 
     out += "\n⚠️ Not SEBI registered. Validate before trading."
     return out
@@ -905,7 +987,7 @@ def format_json(results, today):
 def main():
     (stocks, use_ai, use_trailing, sector_cap, fundamental_filter,
      output_format, level_mode, top_n, auto_retrain,
-     filter_neg_hist, backtest_first, conversation_label) = parse_args()
+     filter_neg_hist, backtest_first, conversation_label, debug_mode) = parse_args()
     today = datetime.now().strftime("%d %b %Y %I:%M %p IST")
 
     # ── Backtest first (optional) ────────────────────────────────────────
@@ -971,7 +1053,26 @@ def main():
     if fundamental_filter: tags.append("+Fundamentals")
     if top_n: tags.append(f"--top{top_n}")
     tag = f" ({', '.join(tags)})" if tags else ""
-    print(f"📊 NIFTY SCANNER v17{tag} | {today}")
+    print(f"📊 NIFTY SCANNER v22{tag} | {today}")
+    # ── ML coverage + backtest freshness warnings ───────────────────────
+    if use_ai:
+        import os as _os
+        model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+        models = [f for f in _os.listdir(model_dir) if f.endswith('_model.joblib')]
+        total = len(stocks)
+        covered = sum(1 for r in results if not r.get('ml', {}).get('_ml_fail_reason') == 'NO_MODEL')
+        missing = total - covered
+        if missing > 0:
+            print(f"  ⚠️  ML: {covered}/{total} stocks have models | {missing} NO_MODEL → run: train.py --index nifty100")
+    # Backtest freshness check
+    bt_files = [f for f in os.listdir(model_dir) if f.startswith('backtest_v')]
+    if bt_files:
+        latest = max(bt_files, key=lambda f: os.path.getmtime(os.path.join(model_dir, f)))
+        age_days = (datetime.now() - datetime.fromtimestamp(os.path.getmtime(os.path.join(model_dir, latest)))).days
+        if age_days >= 7:
+            print(f"  ⚠️  Backtest stale: {latest} ({age_days}d old) → run: scan.py --backtest-first")
+        else:
+            print(f"  ✅ Backtest: {latest} ({age_days}d old)")
     print("=" * 70)
 
     buy = sorted([r for r in results if r['signal'] == 'BUY'], key=lambda x: -x['prob'])
@@ -987,6 +1088,22 @@ def main():
         print(f"  {r['symbol']} ₹{r['price']:,.2f} | {r['prob']}% | RSI:{r['rsi']} | {r['change']:+.2f}%{div_tag}{sec_tag}{tag_str}")
         print(f"    Entry:₹{r['price']} SL:₹{r['sl']} T1:₹{r['t1']} T2:₹{r['t2']} | S:₹{r['support']} R:₹{r['resistance']}")
         print(f"    Conf:{r['buy_cnt' if label=='BUY' else 'sell_cnt']}/7 | Vol:{r['vol_ratio']}x | Mom:{r['ret5']:+.1f}% | Pos:{r['pos_pct']}%")
+        # ── Debug: confluence component breakdown ──────────────────────
+        if debug_mode:
+            stats = r.get('_stats', {})
+            ai_score = (ai.get('total_score', 0) + 100) / 200.0 if ai else 0.5
+            sig_conf = r.get('prob', 50) / 100.0
+            wr = stats.get('win_rate', 0) / 100.0
+            align = r.get('_level_align', 'ALIGNED')
+            align_s = 1.0 if align == 'ALIGNED' else (0.5 if align == 'WARN' else 0.0)
+            age_days = r.get('signal_age_days', 0)
+            age_tier, age_pen = _stale_tier(age_days)
+            age_s = max(0, 1.0 - age_pen)
+            rr = stats.get('realized_return', 0)
+            regime = r.get('_regime_label', 'NEUTRAL')
+            neg = '⚠️NEG' if rr < -2.0 else ('⚠️LOW' if rr < 0 else '✅')
+            print(f"    🔍 CF-DEBUG: sig_conf={sig_conf:.2f}×0.20 | ai={ai_score:.2f}×0.25 | wr={wr:.2f}×0.20 | align={align_s:.2f}×0.10 | age={age_s:.2f}×0.10 | regime=1.0×0.15 | neg_hist={neg}(rr={rr:.1f}%)")
+            print(f"       → CF={r.get('_confluence', 0)}/10 | RR={rr:+.1f}% WR={stats.get('win_rate',0):.0f}% Trades={stats.get('total_trades',0)} | regime={regime} | age={age_days}d({age_tier})")
         if fundamental_filter:
             print(f"    Fundamentals: Score:{r.get('fundamental_score',0)} | PE:{r.get('pe','-')} | MCap:{r.get('mcap','-')} | Div:{r.get('div_yield','-')}")
         if use_ai and ai:

@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Forward Testing (Paper Trading) v8
-v8 changes:
-  1. pnl_list tracks every realized exit for proper Sharpe calculation
-  2. realized_return = realized_pnl / capital_at_risk (correct denominator)
-  3. Peak capital = realized only (no unrealized counting)
-  4. Signal exit fires with pullback guard (≥1% from entry) — same as backtest
-  5. --no-sig-exit flag for SL/TSL-only exits
-  6. ML validation still works as momentum filter
-  7. Proper 1% risk position sizing per trade
+NIFTY Live Quant Ultra - Forward Testing (Paper Trading) v9
+v9 changes:
+  1. Signal engine delegated to nifty_core.get_signal (single source of truth)
+  2. --index nifty100 flag support added
+  3. All v8 changes retained (pnl_list, realized_return, pullback guard)
 """
 import sys
 import os
@@ -23,60 +19,19 @@ import json
 from datetime import datetime
 
 from nifty_core import (
-    DEFAULT_STOCKS, ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG,
+    DEFAULT_STOCKS, SCANNABLE_STOCKS, GOOD_STOCKS,
+    ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG,
     get_ohlc, add_features, build_ml_features,
+    get_signal as core_get_signal,
 )
 
 STOCKS = DEFAULT_STOCKS
 
 def get_signal(df, i):
-    """Unified signal — mirrors backtest.py exactly."""
-    if i < 200:
-        return 0
-    row = df.iloc[i]
-    pv = row['Close']
-    ma20 = row['ma20']
-    ma50 = row['ma50']
-    ma200 = row['ma200']
-    rsi = row['rsi']
-    macd, macd_sig = row['macd'], row['macd_sig']
-    vol_ratio = row['vol_ratio']
-    ret5 = row['ret5']
+    """Wrapper: delegates to nifty_core.get_signal, returns int (0/1/-1)."""
+    sig_val, meta, _ = core_get_signal(df, i)
+    return sig_val
 
-    if pd.isna(rsi) or pd.isna(ma20) or pd.isna(ma50) or pd.isna(ma200):
-        return 0
-
-    c_price_ma20 = pv > ma20
-    c_price_ma50 = pv > ma50
-    c_ma50_ma200 = ma50 > ma200
-    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']
-    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
-    c_macd = macd > macd_sig
-    c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
-    c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
-
-    buy_cnt = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
-    sell_cnt = sum([pv < ma20, pv < ma50, ma50 < ma200,
-                    c_rsi_sell, not c_macd, c_vol, ret5 < 0])
-
-    from nifty_core import detect_divergence
-    div = detect_divergence(df.iloc[:i+1])
-    if div == "BULLISH":
-        buy_cnt += 2
-
-    if rsi > 70:
-        buy_cnt = 0
-    elif rsi > RSI_CONFIG['buy_relaxed']:
-        if not c_ma50_ma200:
-            buy_cnt = 0
-    if rsi < RSI_CONFIG['sell_relaxed']:
-        sell_cnt = 0
-
-    if buy_cnt >= SIGNAL_CONFIG['min_confirmations']:
-        return 1
-    elif sell_cnt >= SIGNAL_CONFIG['min_confirmations']:
-        return -1
-    return 0
 
 def get_ml_prediction(symbol, df, idx):
     """Get ML prediction at index idx. Returns (direction, confidence) or None."""
@@ -330,13 +285,14 @@ def forward_test_stock(symbol, test_days=30, use_ml=True, no_sig_exit=False, ver
         'trades_list': trades
     }
 
-def run_forward_test(test_days=30, use_ml=True, no_sig_exit=False):
+def run_forward_test(test_days=30, use_ml=True, no_sig_exit=False, index='nifty50'):
+    stocks = SCANNABLE_STOCKS if index == 'nifty100' else STOCKS
     print("=" * 70)
-    print(f"📊 NIFTY FORWARD TEST v8 | Last {test_days} days | ML: {use_ml} | SigExit: {not no_sig_exit}")
+    print(f"📊 NIFTY FORWARD TEST v9 | Last {test_days} days | ML: {use_ml} | SigExit: {not no_sig_exit} | Universe: {index}")
     print("=" * 70)
 
     results = []
-    for symbol in STOCKS:
+    for symbol in stocks:
         name = symbol.replace('.NS', '')
         print(f"\n🔄 {name}...", end=' ', flush=True)
         result = forward_test_stock(symbol, test_days=test_days, use_ml=use_ml,
@@ -392,5 +348,7 @@ if __name__ == "__main__":
     parser.add_argument('days', type=int, nargs='?', default=30)
     parser.add_argument('--no-ml', action='store_true')
     parser.add_argument('--no-sig-exit', action='store_true')
+    parser.add_argument('--index', choices=['nifty50', 'nifty100'], default='nifty50',
+                        help='Stock universe (default: nifty50)')
     args = parser.parse_args()
-    run_forward_test(args.days, use_ml=not args.no_ml, no_sig_exit=args.no_sig_exit)
+    run_forward_test(args.days, use_ml=not args.no_ml, no_sig_exit=args.no_sig_exit, index=args.index)

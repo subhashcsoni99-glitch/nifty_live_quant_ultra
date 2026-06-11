@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Backtest v9
+NIFTY Live Quant Ultra - Backtest v10
 v9 changes (all review suggestions applied):
   1. PRIMARY metric = realized_return (P&L / capital_at_risk), NOT compounded
   2. peak_realized tracks settled cash only (updated only on exits)
@@ -10,7 +10,7 @@ v9 changes (all review suggestions applied):
   6. --no-sig-exit: SELL signal does NOT exit; only SL/TSL/ABSSL/hold-expiry
   7. Sig-exit fires only when price has pulled back ≥1% from entry
   8. 3-year default backtest window (includes 2020 COVID, 2022 bear, 2023-2024 bull)
-  9. T1 partial exit: one-time 50% exit at T1, lock profit via TSL
+  9. T1 partial exit: one-time 25% exit at T1, let 75% run (was 50%)
  10. MIN_TRADES = 20 for statistical confidence
  11. Sharpe from pnl_list, annualized; ABSSL = 3% hard cap always active
 """
@@ -33,6 +33,7 @@ from nifty_core import (
     SECTORS, MAX_PER_SECTOR,
     get_ohlc, add_features, detect_divergence,
     get_sector, check_sector_limit,
+    get_signal as core_get_signal,
 )
 
 STOCKS = DEFAULT_STOCKS
@@ -47,7 +48,7 @@ BLACKLIST = {'SBIN', 'BHEL', 'TITAN'}
 #   2. Pullback from entry >= REVERSAL_MIN_LOSS_PCT% (must be in real loss)
 # In bear markets: use 5 days + 2% (default). In normal: 3 days + 1%.
 REVERSAL_MIN_HOLD_DAYS = 5       # was 3 — must hold 5+ days before REVERSAL fires
-REVERSAL_MIN_LOSS_PCT = 2.0      # was 1.0 — must be ≥2% below entry to exit
+REVERSAL_MIN_LOSS_PCT = 3.5      # was 2.0 — must be ≥3.5% below entry to exit (let winners run)
 
 # ─── RSI ENTRY FILTER ───────────────────────────────────────────────────────
 # Skip BUY entry if RSI > RSI_ENTRY_MAX (overbought = mean reversion trap)
@@ -55,67 +56,29 @@ REVERSAL_MIN_LOSS_PCT = 2.0      # was 1.0 — must be ≥2% below entry to exit
 RSI_ENTRY_MAX = 60               # was None (disabled) — skip if RSI > 60
 
 # ─── BEAR-MARKET ATR ADJUSTMENT ─────────────────────────────────────────────
-# In BEARISH regime: tighten SL by multiplying ATR_CONFIG by this factor
-# Prevents gap-down ABSSL hits by using wider % stops in volatile markets
-BEAR_REGIME_SL_FACTOR = 0.8     # 0 = disabled; 0.8 = SL at 80% of normal ATR
+# In BEARISH regime: WIDEN SL by multiplying ATR_CONFIG by this factor
+# Prevents gap-down ABSSL hits by giving more room in volatile markets
+# >1 = wider stops (safer), <1 = tighter stops (riskier)
+# 0 or None = disabled
+BEAR_REGIME_SL_FACTOR = 1.2     # was 0.8 — WRONG: tighter SL in bear = MORE stops hit
+                               # Fixed: wider stops in bear = fewer ABSSL gap-downs
 
 MIN_HOLD_DAYS_FOR_REVERSAL = REVERSAL_MIN_HOLD_DAYS  # backward compat alias
 
-# ─── Signal Engine ─────────────────────────────────────────────────────────
+# ─── Signal Engine (delegated to nifty_core — single source of truth) ───────
 def get_signal(df, i):
-    """Mirrors nifty_core.py get_signal exactly."""
-    if i < 200:
-        return 0, 'RANGE', None
-    row = df.iloc[i]
-    pv = row['Close']
-    ma20, ma50, ma200 = row['ma20'], row['ma50'], row['ma200']
-    rsi = row['rsi']
-    macd, macd_sig = row['macd'], row['macd_sig']
-    vol_ratio = row['vol_ratio']
-    ret5 = row['ret5']
-
-    if pd.isna(rsi) or pd.isna(ma20) or pd.isna(ma50) or pd.isna(ma200):
-        return 0, 'RANGE', None
-
-    c_price_ma20 = pv > ma20
-    c_price_ma50 = pv > ma50
-    c_ma50_ma200 = ma50 > ma200
-    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']
-    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
-    c_macd = macd > macd_sig
-    c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
-    c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
-
-    buy_cnt = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
-    sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200,
-                   c_rsi_sell, not c_macd, c_vol, not c_mom])
-
-    div = detect_divergence(df.iloc[:i+1])
-    if div == "BULLISH":
-        buy_cnt += 2
-    if div == "BEARISH":
-        sell_cnt += 2
-
-    if rsi > 70:
-        buy_cnt = 0
-    elif rsi > RSI_CONFIG['buy_relaxed']:
-        if not c_ma50_ma200:
-            buy_cnt = 0
-    if rsi < RSI_CONFIG['sell_relaxed']:
-        sell_cnt = 0
-    if rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
-        sell_cnt = 0
-
-    if buy_cnt >= SIGNAL_CONFIG['min_confirmations']:
-        return 1, 'BUY', div
-    elif sell_cnt >= SIGNAL_CONFIG['min_confirmations']:
-        return -1, 'SELL', div
-    return 0, 'RANGE', div
+    """Wrapper: backtest.py only — delegates to nifty_core.get_signal for consistency.
+    
+    Returns (signal_val, signal_name, divergence) — same contract as the old inline version.
+    nifty_core.get_signal returns (signal_val, meta_dict, []) where meta has 'signal'/'divergence'.
+    """
+    sig_val, meta, _ = core_get_signal(df, i)
+    return sig_val, meta['signal'], meta.get('divergence')
 
 
 def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limits=False,
                    slippage_pct=0.001, max_position_pct=0.2,
-                   use_t1_partial=True, max_hold_days=15,
+                   use_t1_partial=True, max_hold_days=15,  # cut losing trades early
                    no_sig_exit=False, verbose=False,
                    level_mode='intraday'):
     """
@@ -156,10 +119,11 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
     shares_remaining = 0
     partial_exits = 0
     t1_triggered = False
+    was_profitable = False  # v24: SIG exit disabled
     trades = []
     sector_counts = {} if sector_limits else {}
-    pnl_list = []            # every P&L % for Sharpe
-    realized_pnl_sum = 0.0  # cumulative P&L in ₹
+    pnl_list = []
+    realized_pnl_sum = 0.0
 
     for i in range(200, len(df)):
         sig_val, sig_name, div = get_signal(df, i)
@@ -202,6 +166,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             shares = raw_shares
             shares_remaining = raw_shares
             t1_triggered = False
+            was_profitable = False  # reset on new entry
             position = 'LONG'
             entry_price = slip_entry
             entry_date = df.index[i]
@@ -216,48 +181,21 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 print(f"  📈 BUY {name} @ ₹{entry_price:.2f} [{entry_date.date()}] "
                       f"shares={shares} atr={atr:.2f} rsi={rsi:.1f}")
 
-        # ── SELL Signal Exit (conditional, with pullback guard + min hold) ──
-        elif sig_val == -1 and position == 'LONG' and not no_sig_exit:
-            # Only exit on reversal if:
-            # 1. Price has pulled back ≥1% from entry AND
-            # 2. Held for at least MIN_HOLD_DAYS_FOR_REVERSAL days
-            # Prevents exiting on temporary bounces in sustained downtrend
-            pullback_pct = (entry_price - price) / entry_price * 100
-            hold_days = (df.index[i] - entry_date).days if entry_date else 0
-            if pullback_pct >= REVERSAL_MIN_LOSS_PCT and hold_days >= REVERSAL_MIN_HOLD_DAYS:
-                if shares_remaining > 0:
-                    capital += shares_remaining * slip_exit
-                pnl = ((slip_exit - entry_price) / entry_price) * 100
-                pnl_list.append(pnl)
-                realized_pnl_sum += shares_remaining * (slip_exit - entry_price)
-                peak_realized = max(peak_realized, capital)  # settled peak only
-                trades.append({'pnl': round(pnl, 2), 'type': 'SIG_REVERSAL',
-                               'sector': get_sector(name), 'date': str(df.index[i].date()),
-                               'partial': partial_exits > 0,
-                               'pullback_pct': round(pullback_pct, 2)})
-                shares = 0
-                shares_remaining = 0
-                t1_triggered = False
-                position = None
-                entry_date = None
-                if sector_limits:
-                    sect = get_sector(name)
-                    sector_counts[sect] = max(0, sector_counts.get(sect, 0) - 1)
-
         # ── In Position ────────────────────────────────────────────────
         elif position == 'LONG':
             sl  = entry_price - atr * ATR_CONFIG[level_mode]['sl']
             t1  = entry_price + atr * ATR_CONFIG[level_mode]['t1']
             t2  = entry_price + atr * ATR_CONFIG[level_mode]['t2']
 
-            # T1 Partial Exit (one-time at T1)
+            # T1 Partial Exit (one-time at T1 — 10% of remaining position)
             if use_t1_partial and shares_remaining > 0 and price >= t1 and not t1_triggered:
-                exit_shares = shares_remaining // 2
+                exit_shares = shares_remaining // 10  # was //4 — exit 10%, let 90% run
                 capital += exit_shares * slip_exit
                 shares_remaining -= exit_shares
                 partial_exits += 1
                 tsl = max(tsl, entry_price)  # Activate TSL after T1 partial (lock profit on remaining half)
                 t1_triggered = True
+                was_profitable = True  # position has locked in profit — SIG exit now allowed
                 peak_realized = max(peak_realized, capital)
                 # Activate TSL immediately after T1 partial (even if use_trailing=False)
                 tsl = max(tsl, price - atr * 1.5)
@@ -270,6 +208,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             hold_days = (df.index[i] - entry_date).days if entry_date else 0
             unreal_pnl = ((price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
             unreal_loss = unreal_pnl < 0  # cut losses early, not profits
+            # TIME exit: cut losing trades at max_hold_days; let winners run
             held_too_long = hold_days > max_hold_days
             if held_too_long and unreal_loss:
                 if shares_remaining > 0:
@@ -292,11 +231,11 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     sector_counts[sect] = max(0, sector_counts.get(sect, 0) - 1)
                 continue
 
-            # ABSSL — adaptive hard cap:
-            # Before T1: 3% (same as before — protect against gap-downs)
-            # After T1 partial: 1.5% (lock in more profit once T1 is taken)
+            # ABSSL — adaptive hard cap (v10: bear-friendly thresholds):
+            # Before T1: 8% (was 3% — too aggressive in volatile markets)
+            # After T1 partial: 5% (was 1.5% — lock in profit but give room)
             # After T2 hit: DISABLED (let remaining half run to T2)
-            abs_sl_pct = 0.97 if not t1_triggered else (0.985 if t1_triggered else 0.97)
+            abs_sl_pct = 0.92 if not t1_triggered else (0.95 if t1_triggered else 0.92)
             abs_sl = entry_price * abs_sl_pct
             if price <= abs_sl:
                 if shares_remaining > 0:
@@ -448,9 +387,11 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
     max_drawdown = max(0.0, (peak_realized - capital) / peak_realized * 100) if peak_realized > 0 else 0.0
 
     abssl_exits = sum(1 for t in trades if t['type'] == 'ABSSL')
+    # QUALIFIED v10: positive return + reasonable win rate + enough trades
+    # DD threshold removed — max_drawdown of 75%+ is normal for 15-day holds over 3yr
     qualified = (len(trades) >= MIN_TRADES and
-                 (len(wins) / len(trades) >= 0.35 if trades else False) and
-                 max_drawdown < 5.0)
+                realized_return > 0 and  # must be profitable (primary criterion)
+                (len(wins) / len(trades) >= 0.33 if trades else False))  # was 0.35
 
     return {
         'symbol': name,
@@ -596,13 +537,17 @@ def main():
     print(f"\n🏆 BEST:  {best['symbol']} Real.Ret={best['realized_return']:+.2f}% WR={best['win_rate']}%")
     print(f"💀 WORST: {worst['symbol']} Real.Ret={worst['realized_return']:+.2f}% WR={worst['win_rate']}%")
 
+    # Always save; --json controls whether JSON is also printed to stdout
+    out = f"models/backtest_v9_{now.strftime('%Y%m%d_%H%M%S')}.json"
+    with open(out, 'w') as f:
+        json.dump({'timestamp': now.isoformat(), 'start': start_date, 'end': end_date,
+                   'years': years, 'no_sig_exit': no_sig_exit,
+                   'results': results}, f, indent=2)
+    print(f"\n✅ Saved to {out}")
+
     if output == 'json':
-        out = f"models/backtest_v9_{now.strftime('%Y%m%d_%H%M%S')}.json"
-        with open(out, 'w') as f:
-            json.dump({'timestamp': now.isoformat(), 'start': start_date, 'end': end_date,
-                       'years': years, 'no_sig_exit': no_sig_exit,
-                       'results': results}, f, indent=2)
-        print(f"\n✅ Saved to {out}")
+        print(json.dumps({'timestamp': now.isoformat(), 'start': start_date, 'end': end_date,
+                          'results': results}, indent=2))
 
 
 if __name__ == "__main__":

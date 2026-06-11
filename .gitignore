@@ -1,0 +1,5 @@
+models/*.joblib
+models/backtest_*.json
+__pycache__/
+*.pyc
+logs/

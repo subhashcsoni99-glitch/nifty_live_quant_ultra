@@ -39,19 +39,9 @@ NIFTY50_STOCKS = [
     'TITAN', 'TRENT', 'ULTRACEMCO', 'WIPRO',
 ]
 
-NIFTY100_STOCKS = NIFTY50_STOCKS + [
-    'ADANIENS', 'ADANIPOWER', 'AUBANK', 'AWL', 'AXISBANK',  # Already covered via NIFTY50 now
-]
-# Actual NIFTY100 = NIFTY50 + these extra stocks (deduped)
-_100_EXTRA = [
-    'SBICARD', 'M&MFIN', 'INDUSINDBK', 'KOTAKBANK', 'ICICIBANK',  # moved to NIFTY50
-]
-# NIFTY100 = NIFTY50 already covers first 50. Remaining 50 for NIFTY100:
-# All 4 confirmed working + in actual indices/commonly scanned
-CUSTOM_STOCKS = ['INDIGOPNTS', 'ETERNAL', 'JSWENERGY', 'MANKIND', 'SIEMENS']
-
-# NIFTY100 = NIFTY50 + extra stocks that have valid yfinance data
-NIFTY100_STOCKS = list(dict.fromkeys(NIFTY50_STOCKS + [
+# NIFTY100 extra stocks (NIFTY50 already covers 50; extras = the remaining ~50)
+# Set arithmetic removes any NIFTY50 overlap; EXCLUDED_STOCKS also filtered
+NIFTY100_EXTRA = sorted({
     'SBICARD', 'ADANIPORTS', 'ASIANPAINT', 'BPCL', 'CIPLA', 'COALINDIA',
     'HDFCLIFE', 'MARUTI', 'M&MFIN', 'NESTLEIND', 'SHREECEM', 'JSWSTEEL',
     'ACC', 'AMBUJACEM', 'APOLLOHOSP', 'BANKBARODA', 'BERGEPAINT',
@@ -61,10 +51,10 @@ NIFTY100_STOCKS = list(dict.fromkeys(NIFTY50_STOCKS + [
     'INDIGOPNTS', 'JUBLFOOD', 'LICHSGFIN', 'MOTHERSON', 'NMDC',
     'NTPC', 'ONGC', 'PFC', 'PIIND', 'POWERGRID',
     'RECLTD', 'SUNTV', 'TATACONSUM', 'TATASTEEL',
-    # User-added: confirmed working, have valid yfinance data
-    'ETERNAL', 'JSWENERGY', 'MANKIND', 'SIEMENS', 'GODREJCP',
-]))
+    'ETERNAL', 'JSWENERGY', 'MANKIND', 'SIEMENS',
+} - set(NIFTY50_STOCKS) - EXCLUDED_STOCKS)
 
+NIFTY100_STOCKS = NIFTY50_STOCKS + NIFTY100_EXTRA
 GOOD_STOCKS = [s for s in NIFTY50_STOCKS if s not in EXCLUDED_STOCKS]
 SCANNABLE_STOCKS = [s for s in NIFTY100_STOCKS if s not in EXCLUDED_STOCKS]
 DEFAULT_STOCKS = GOOD_STOCKS
@@ -88,15 +78,15 @@ ATR_CONFIG = {
 # These two signals measure different things: mean-reversion vs momentum.
 RSI_CONFIG = {
     'period': 14,
-    'buy_strict':  38,   # was 45 — true oversold zone (< 38 = oversold bounce setup)
+    'buy_strict':  38,   # RSI < 38 = oversold (v27: was 35, relaxed to generate more signals)
     'buy_relaxed': 65,   # allow BUY up to RSI 65 in strong uptrend
-    'sell_strict': 62,   # was 55 — was too low, now requires more overbought confirmation
-    'sell_relaxed': 40,   # was 35 — block SELL below 40 (deeply oversold bounce zone)
+    'sell_strict': 50,   # RSI > 50 = overbought (v27: was 55, relaxed to generate more signals)
+    'sell_relaxed': 36,  # block SELL below 36 (deeply oversold bounce zone)
 }
 
 # ─── Signal Thresholds ──────────────────────────────────────────────────────
 SIGNAL_CONFIG = {
-    'min_confirmations': 4,
+    'min_confirmations': 2,  # was 3 — need 2 conditions instead of 3 for signal
     'volume_spike': 0.8,
     'vol_spike_strong': 1.3,
     'momentum_zero': 0,
@@ -104,16 +94,20 @@ SIGNAL_CONFIG = {
 
 # ─── Sector Mapping ─────────────────────────────────────────────────────────
 SECTORS = {
-    'Banking':      ['SBIN', 'SBICARD', 'HDFCBANK', 'INDUSINDBK', 'KOTAKBANK', 'AXISBANK', 'ICICIBANK'],
-    'Steel':        ['HINDALCO'],
+    'Banking':      ['SBIN', 'SBICARD', 'HDFCBANK', 'INDUSINDBK', 'KOTAKBANK', 'AXISBANK', 'ICICIBANK', 'HDFCLIFE'],
+    'Steel':        ['HINDALCO', 'JSWSTEEL', 'TATASTEEL'],
     'Diversified':  ['RELIANCE', 'BAJFINANCE', 'BAJAJFINSV', 'GRASIM'],
-    'IT':           ['TCS', 'HCLTECH', 'WIPRO', 'TECHM'],
-    'FMCG':         ['ITC', 'GODREJCP'],
-    'CapitalGoods': ['BHEL', 'LT', 'SIEMENS'],
-    'Materials':    ['ULTRACEMCO'],
-    'Auto':         [],
-    'Pharma':       ['SUNPHARMA', 'SBILIFE', 'MANKIND', 'ETERNAL'],
-    'Power':        ['JSWENERGY'],
+    'IT':           ['TCS', 'HCLTECH', 'WIPRO', 'TECHM', 'INFY', 'COFORGE'],
+    'FMCG':         ['ITC', 'HINDUNILVR', 'NESTLEIND', 'BRITANNIA', 'TITAN', 'TATACONSUM', 'GODREJCP'],
+    'CapitalGoods': ['BHEL', 'LT', 'SIEMENS', 'HAL'],
+    'Materials':    ['ULTRACEMCO', 'SHREECEM', 'PCBL'],
+    'Auto':         ['M&M', 'MARUTI', 'EICHERMOT', 'TATAMOTORS'],
+    'Pharma':       ['SUNPHARMA', 'SBILIFE', 'CIPLA', 'DRREDDY', 'DIVISLAB', 'APOLLOHOSP', 'MANKIND', 'ETERNAL'],
+    'Power':        ['NTPC', 'ONGC', 'COALINDIA', 'NMDC', 'JSWENERGY'],
+    'Infrastructure': ['ADANIENT', 'ADANIPORTS'],
+    'OilGas':       ['BPCL'],
+    'Paints':       ['ASIANPAINT'],
+    'Retail':       ['TRENT'],
 }
 MAX_PER_SECTOR = 2
 
@@ -337,18 +331,16 @@ def get_signal(df, i):
     """
     Returns (signal_val, meta_dict, []).
     signal_val: 1=BUY, -1=SELL, 0=RANGE
-    Signal logic: MEAN-REVERSION. RSI low (<38) = expect bounce.
-    RSI guards:
-      - Block BUY if RSI > 70 (overbought)
-      - Allow BUY up to RSI 65 only if in strong uptrend (MA50 > MA200)
-      - Block SELL if RSI < 40 (deeply oversold bounce zone)
-      - RSI 40-45: allow SELL only if price below ALL MAs (no support)
+    Signal logic: MEAN-REVERSION + SHORT-TERM MOMENTUM.
+    BUY: RSI < 35 (oversold) + MA5>MA20 OR ret5>0 → +1 momentum bonus
+    SELL: RSI > 55 (overbought) + MA5<MA20 AND ret5<0 → +1 momentum bonus
     """
     if i < 200:
         return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0, 'divergence': None, 'reasons': []}, []
 
     row = df.iloc[i]
     pv = row['Close']
+    ma5  = row['ma5']
     ma20 = row['ma20']
     ma50 = row['ma50']
     ma200 = row['ma200']
@@ -358,35 +350,44 @@ def get_signal(df, i):
     vol_ratio = row['vol_ratio']
     ret5 = row['ret5']
 
+    # Momentum (v24: short-term trend filter — don't buy falling knives)
+    c_ma5_above_ma20 = ma5 > ma20 if not (pd.isna(ma5) or pd.isna(ma20)) else False
+    c_ret5_positive  = ret5 > 0
+    c_short_term_bull = c_ma5_above_ma20 or c_ret5_positive
+    c_short_term_bear = not c_short_term_bull
+
     c_price_ma20 = pv > ma20
     c_price_ma50 = pv > ma50
     c_ma50_ma200 = ma50 > ma200
-    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']
-    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
+    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']   # 35: only true oversold
+    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']  # 55: overbought zone
     c_macd = macd > macd_sig
     c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
     c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
+    # v24: short-term momentum for BUY (don't buy falling knives — require uptick)
+    c_ma5_above_ma20 = (not pd.isna(ma5) and not pd.isna(ma20) and ma5 > ma20)
+    c_ret5_positive = ret5 > 0
 
     buy_cnt = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
+    # Bonus: if RSI < 35 AND short-term uptick (MA5>MA20 OR ret5>0) → extra +1
+    if c_rsi_buy and (c_ma5_above_ma20 or c_ret5_positive):
+        buy_cnt += 1
+
     sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200, c_rsi_sell, not c_macd, c_vol, not c_mom])
+    # Bonus: if RSI > 55 AND price below MA20 → extra +1
+    if c_rsi_sell and not c_price_ma20:
+        sell_cnt += 1
 
     divergence = detect_divergence(df.iloc[:i+1])
     if divergence == "BULLISH":
         buy_cnt += 2
 
-    # RSI Guards (v3: tighter blocks)
-    # Block BUY when RSI > 70 (overbought — mean reversion sell, not buy)
-    if rsi > 70:
-        buy_cnt = 0
-    # Allow BUY up to RSI 65 only in strong uptrend (MA50 > MA200)
-    elif rsi > RSI_CONFIG['buy_relaxed']:
-        if not c_ma50_ma200:
-            buy_cnt = 0
-    # Block SELL when RSI < 40 (deeply oversold — bounce likely)
+    # RSI Guards
+    # Block SELL when RSI < 38 (deeply oversold — don't short bounce)
     if rsi < RSI_CONFIG['sell_relaxed']:
         sell_cnt = 0
-    # RSI 40-45 with price above MA20: not enough overbought to sell
-    if rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
+    # RSI 35-38 with price > MA20: oversold bounce zone — don't sell into recovery
+    elif rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
         sell_cnt = 0
 
     reasons = build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,

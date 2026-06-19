@@ -532,7 +532,7 @@ def get_level_modes_extended(price, atr):
     }
 
 # ─── Analyze Single Stock ──────────────────────────────────────────────────
-def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, level_mode='intraday', auto_retrain=False, momentum_mode=False):
+def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, level_mode='intraday', auto_retrain=False):
     price, prev = get_price(sym)
     df = get_ohlc(sym)
     if df is None or price is None or len(df) < 200:
@@ -551,13 +551,11 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     ret5 = df['ret5'].iloc[-1]
     change_pct = ((price - prev) / prev * 100) if prev and prev > 0 else 0
 
-    sig_val, meta, _ = core_get_signal(df, len(df) - 1, momentum_mode=momentum_mode)
+    sig_val, meta, _ = core_get_signal(df, len(df) - 1)
     signal = meta['signal']
     divergence = meta.get('divergence')
 
     levels = get_level_modes_extended(price, atr)
-    if _OPTION_C_ACTIVE:
-        levels['swing'] = {'sl': round(price - atr * 0.75, 0), 't1': round(price + atr * 1.5, 0), 't2': round(price + atr * 2.5, 0)}
     sr = calc_support_resistance(df)
     pos = calc_position_size(100000, price, atr * ATR_CONFIG[level_mode]['sl'])
     pos_pct = round((pos['position_value'] / 100000) * 100, 1)
@@ -571,7 +569,7 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     ml = None
     hourly = None
     if use_ai:
-        ai = ai_opinion_pipeline(sym, price, rsi, macd, macd_sig, atr, vol_ratio, ret5, df, momentum_mode=momentum_mode)
+        ai = ai_opinion_pipeline(sym, price, rsi, macd, macd_sig, atr, vol_ratio, ret5, df)
         ml = get_ml_prediction(sym, df, auto_retrain=auto_retrain)
         hourly = get_hourly_atr_and_pivot(sym, price)
 
@@ -607,16 +605,11 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
 # ─── Global Option Flags ─────────────────────────────────────────────────
 _OPTION_C_ACTIVE = False  # v34: True when --C passed (morning window + tight SL)
 
-# ─── Global Option Flags ─────────────────────────────────────────────────
-_OPTION_C_ACTIVE = False  # v34: True when --C passed
-
 # ─── CLI Args ──────────────────────────────────────────────────────────────
 def parse_args():
     stocks = DEFAULT_STOCKS
     use_ai = False
     use_trailing = False
-    momentum_mode = False   # v34: Option B — RSI>70/<30 momentum mode
-    adx_filter = True     # v34: Option A — ADX>25 filter (default ON)
     sector_cap = False
     fundamental_filter = False
     output_format = 'default'
@@ -637,19 +630,6 @@ def parse_args():
             use_ai = True; i += 1
         elif arg == '--trailing':
             use_trailing = True; i += 1
-        elif arg.upper() in ('A', 'B', 'C', 'A,B', 'B,C', 'A,C', 'A,B,C'):
-            opts = arg.upper().split(',')
-            if 'A' in opts: adx_filter = True
-            else: adx_filter = False
-            if 'B' in opts: momentum_mode = True
-            if 'C' in opts:
-                global _OPTION_C_ACTIVE
-                _OPTION_C_ACTIVE = True
-            i += 1
-        elif arg == '--no-adx-filter':
-            adx_filter = False; i += 1
-        elif arg == '--momentum-mode':
-            momentum_mode = True; i += 1
         elif arg == '--sector-cap':
             sector_cap = True; i += 1
         elif arg == '--fundamentals':
@@ -717,7 +697,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode
+    return stocks, use_ai, use_trailing, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None):
@@ -725,42 +705,10 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
     sell = [r for r in results if r['signal'] == 'SELL']
     range_list = [r for r in results if r['signal'] == 'RANGE']
 
-    # v34: 4-tier Index Regime (NIFTY50 MA-based) + A/D breadth + trading hours
-    try:
-        import yfinance as yf
-        idx = yf.Ticker("^NSEI")
-        df_i = idx.history(period="5d", interval="1d")
-        if len(df_i) >= 2:
-            price_now = df_i["Close"].iloc[-1]
-            price_prev = df_i["Close"].iloc[-2]
-            ma5 = df_i["Close"].tail(5).mean()
-            ma20 = df_i["Close"].tail(20).mean() if len(df_i) >= 20 else df_i["Close"].mean()
-            from nifty_core import NIFTY50_STOCKS
-            adv, dec = 0, 0
-            for sym in NIFTY50_STOCKS:
-                try:
-                    t = yf.Ticker(sym + ".NS")
-                    h = t.history(period="2d", interval="1d")
-                    if len(h) >= 2:
-                        chg = h["Close"].iloc[-1] - h["Open"].iloc[-2]
-                        if chg > 0: adv += 1
-                        elif chg < 0: dec += 1
-                except: pass
-        else:
-            price_now, ma5, ma20 = 23999, 24000, 23600
-    except Exception:
-        price_now, ma5, ma20, adv, dec = 23999, 24000, 23600, 0, 0
-    if price_now < ma5 and price_now < ma20:
-        regime = "BEARISH"; regime_icon = "🔴"
-    elif price_now < ma5:
-        regime = "NEUTRAL"; regime_icon = "🟡"
-    else:
-        regime = "BULLISH"; regime_icon = "🟢"
-    breadth = f" ({adv}↑/{dec}↓)" if (adv + dec) > 0 else ""
+    # Market regime (computed before _categorize so it can be passed)
     bullish_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BULLISH')
     bear_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BEARISH')
-    now_h = datetime.now().hour + datetime.now().minute / 60
-    session_icon = "🟢 LIVE" if 9 <= now_h < 15.5 else "⚫ CLOSED"
+    regime = "BULLISH" if bullish_count > bear_count else ("BEARISH" if bear_count > bullish_count else "NEUTRAL")
 
     cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = _categorize(results, regime=regime)
 
@@ -772,7 +720,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
 
     conv_tag = f"📋 {conversation_label} | " if conversation_label else ""
     out = f"{conv_tag}🗓️ {today}\n"
-    out += f"📊 Regime: {regime_icon}{regime}{breadth} | NIFTY50:{len(results)} {session_icon}\n"
+    out += f"📊 Regime: {'🟢' if regime=='BULLISH' else '🔴' if regime=='BEARISH' else '🟡'} {regime} (📈{bullish_count} | 📉{bear_count})\n"
     c2_total = long_c2 + short_c2
     out += f"📦 NIFTY50: {len(results)} stocks | CatA📈{long_a}/📉{short_a} | CatA-📈{long_a_m}/📉{short_a_m} | CatB🤖{long_b}/📉{short_b} | CatC1📈{long_c1}/📉{short_c1} | CatC2📊{c2_total} | CatD📉 | WL📋{len(watchlist)}\n"
     # ── ML coverage + backtest freshness ───────────────────────────────
@@ -946,36 +894,35 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
             tline += " " + " ".join(tags)
         return tline
 
-    # v34: TOP BUYS + TOP SHORTS at top — sorted by CF, filtered by regime
-    # is_starred() applied to cat_a+cat_a_minus+cat_b+cat_c1+cat_c2
-    def _top_sort(lst):
-        return sorted(lst, key=lambda x: (
-            -x.get('_confluence', 0),
-            -x.get('prob', 0),
-            -x.get('_stats', {}).get('win_rate', 0),
-        ))
-    top_buys   = _top_sort([r for r in buy  if r.get('_starred')])[:top]
-    top_shorts = _top_sort([r for r in sell if r.get('_starred')])[:top]
-
-    if top_buys:
-        g = sum(1 for r in top_buys if r.get('_stats', {}).get('win_rate', 0) >= 50)
-        y = sum(1 for r in top_buys if 35 <= r.get('_stats', {}).get('win_rate', 0) < 50)
-        out += f"🏆⭐ TOP BUYS  [{len(top_buys)}/{len([r for r in buy if r.get('_starred')])}] 📈BUY ⭐\n"
-        out += "━" * 60 + "\n"
-        for r in top_buys:
-            out += fmt_top_pick(r, 'BUY') + "\n\n"
+    # v25: TOP PICKS — ONLY Cat A/B starred stocks (WR>=45%, RR>0, CF>=8)
+    # Cat C2/D/ML never qualify as TOP_PICKS
+    all_longs = sorted(buy, key=lambda x: ( -x.get('_starred', False), -x.get('_stats',{}).get('win_rate',0), -x.get('_confluence', 0) ))
+    starred_longs = [r for r in all_longs if r.get('_starred')]
+    top_buy = starred_longs[:top]  # v25: only starred (Cat A/B) appear as TOP_PICKS
+    if top_buy:
+        label = f"🏆 TOP 📈 LONG ⭐ TOP_PICKS ({len(top_buy)}"
+        label += f" — 🟢{sum(1 for r in top_buy if r.get('_stats',{}).get('win_rate',0)>=50)} 🟡{sum(1 for r in top_buy if 40<=r.get('_stats',{}).get('win_rate',0)<50)}"
+        out += label + ")\n"
+        for r in top_buy:
+            out += fmt_top_pick(r, 'BUY') + "\n"
     else:
-        out += f"🏆⭐ TOP BUYS  [0]: no BUY signals meet ⭐ criteria (CF>=7+Conf>=65% or WR>=35%+RR>0+CF>=5.5)\n"
+        out += "🏆 TOP 📈 LONG ⭐ TOP_PICKS: none (no stocks meet WR≥45% + RR>0 + CF≥8)\n"
 
-    if top_shorts:
-        g = sum(1 for r in top_shorts if r.get('_stats', {}).get('win_rate', 0) >= 50)
-        y = sum(1 for r in top_shorts if 35 <= r.get('_stats', {}).get('win_rate', 0) < 50)
-        out += f"🏆⭐ TOP SHORTS [{len(top_shorts)}/{len([r for r in sell if r.get('_starred')])}] 📉SHORT ⭐\n"
-        out += "━" * 60 + "\n"
-        for r in top_shorts:
-            out += fmt_top_pick(r, 'SELL') + "\n\n"
+    # v25: TOP SHORT — only Cat A/B starred stocks (same WR/CF/RR filters)
+    all_sells = sorted(sell, key=lambda x: ( -x.get('_starred', False), -x.get('_stats',{}).get('win_rate',0), -x.get('_confluence', 0) ))
+    starred_sells = [r for r in all_sells if r.get('_starred')]
+    top_sell = starred_sells[:top]  # v25: only starred (Cat A/B) appear as TOP_PICKS
+    if top_sell:
+        hedge_sells = [r for r in top_sell if '🛡️ HEDGE' in r.get('tags', [])]
+        label = f"\n💀 TOP 📉 SHORT ⭐ TOP_PICKS ({len(top_sell)}"
+        label += f" — 🟢{sum(1 for r in top_sell if r.get('_stats',{}).get('win_rate',0)>=50)} 🟡{sum(1 for r in top_sell if 40<=r.get('_stats',{}).get('win_rate',0)<50)}"
+        if hedge_sells:
+            label += f" 🛡️{len(hedge_sells)}HEDGE"
+        out += label + ")\n"
+        for r in top_sell:
+            out += fmt_top_pick(r, 'SELL') + "\n"
     else:
-        out += f"🏆⭐ TOP SHORTS [0]: no SELL signals meet ⭐ criteria (CF>=7+Conf>=65%+TRENDING)\n"
+        out += "\n💀 TOP 📉 SHORT ⭐ TOP_PICKS: none\n"
 
     out += "\n⚠️ Not SEBI registered. Validate before trading."
     return out
@@ -1056,7 +1003,7 @@ def format_json(results, today):
 
 # ─── Main ───────────────────────────────────────────────────────────────────
 def main():
-    (stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter,
+    (stocks, use_ai, use_trailing, sector_cap, fundamental_filter,
      output_format, level_mode, top_n, auto_retrain,
      filter_neg_hist, backtest_first, conversation_label, debug_mode) = parse_args()
     today = datetime.now().strftime("%d %b %Y %I:%M %p IST")
@@ -1084,8 +1031,7 @@ def main():
     for sym in stocks:
         r = analyze(sym, use_ai=use_ai, use_trailing=use_trailing,
                     fundamental_filter=fundamental_filter,
-                    level_mode=level_mode, auto_retrain=auto_retrain,
-                    momentum_mode=momentum_mode)
+                    level_mode=level_mode, auto_retrain=auto_retrain)
         if r and r['price'] and r['price'] > 0:
             if filter_neg_hist:
                 stats = r.get('_stats', {})

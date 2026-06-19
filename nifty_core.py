@@ -67,7 +67,7 @@ ATR_CONFIG = {
     # T1=0.75×ATR (~0.5-0.7% in 1hr), T2=1.5×ATR (~1-1.5% in 2-3hr), SL=1.5×ATR
     'intraday_tight': {'sl': 1.5, 't1': 0.75, 't2': 1.5},
     # SWING: wider SL, wider targets for multi-day holds
-    'swing':    {'sl': 2.0, 't1': 3.0, 't2': 6.0},
+    'swing':    {'sl': 1.5, 't1': 2.5, 't2': 4.0},  # v30: tighter SL/T1 = better WR & DD
     'period': 14,
 }
 
@@ -78,10 +78,31 @@ ATR_CONFIG = {
 # These two signals measure different things: mean-reversion vs momentum.
 RSI_CONFIG = {
     'period': 14,
-    'buy_strict':  38,   # RSI < 38 = oversold (v27: was 35, relaxed to generate more signals)
+    'buy_strict':  38,   # RSI < 38 = oversold
     'buy_relaxed': 65,   # allow BUY up to RSI 65 in strong uptrend
-    'sell_strict': 50,   # RSI > 50 = overbought (v27: was 55, relaxed to generate more signals)
-    'sell_relaxed': 36,  # block SELL below 36 (deeply oversold bounce zone)
+    'sell_strict': 60,  # RSI > 60 = overbought  (v30: was 55 — tightened)
+    'sell_relaxed': 40,  # block SELL below 40 (deeply oversold bounce zone)  (v30: was 36)
+}
+
+# ─── ADX Trend Filter ─────────────────────────────────────────────────────────
+# Option A: Only trade when ADX > ADX_THRESHOLD — filters choppy markets
+# ADX < 20 = no trend (choppy), ADX 20-25 = weak trend, ADX > 25 = trending
+ADX_CONFIG = {
+    'period': 14,
+    'threshold': 25,          # Only trade when ADX > 25 (trending market)
+    'enabled': True,           # Master switch — set False to disable
+}
+
+# ─── Momentum Mode (Option B) ─────────────────────────────────────────────────
+# BUY when RSI>70 AND MACD bearish-diverging = top-picking mode
+# SELL when RSI<30 AND MACD bullish-diverging = bottom-picking mode
+# Activated via --momentum-mode flag
+MOMENTUM_CONFIG = {
+    'enabled': False,          # Master switch — activated via --momentum-mode
+    'rsi_overbought': 70,     # RSI > 70 = overbought zone for momentum BUY
+    'rsi_oversold': 30,       # RSI < 30 = oversold zone for momentum SELL
+    'macd_bear_div': True,    # Require bearish divergence for momentum BUY
+    'macd_bull_div': True,    # Require bullish divergence for momentum SELL
 }
 
 # ─── Signal Thresholds ──────────────────────────────────────────────────────
@@ -236,6 +257,40 @@ def add_features(df):
     df['vol_ma'] = df['Volume'].rolling(20).mean()
     df['vol_ratio'] = df['Volume'] / (df['vol_ma'] + 1)
     df['ret5'] = df['Close'].pct_change(5)
+    # ── ADX (Average Directional Index) — Option A ───────────────────────
+    # Computed once here, reused by both get_signal() and get_adx()
+    adx_period = ADX_CONFIG['period']
+    alpha = 1.0 / adx_period
+
+    high_dm = df['High'].diff()
+    low_dm = -df['Low'].diff()
+    pos_dm = high_dm.where((high_dm > low_dm) & (high_dm > 0), 0.0)
+    neg_dm = low_dm.where((low_dm > high_dm) & (low_dm > 0), 0.0)
+
+    # Wilder's smoothing for +DM and -DM (EWM with alpha=1/period)
+    pos_dm_sm = pos_dm.ewm(alpha=alpha, adjust=False).mean()
+    neg_dm_sm = neg_dm.ewm(alpha=alpha, adjust=False).mean()
+
+    # +DI and -DI: normalized by ATR
+    pos_di = 100 * pos_dm_sm / (df['atr'] + 1e-10)
+    neg_di = 100 * neg_dm_sm / (df['atr'] + 1e-10)
+
+    # DX: strength of directional movement (0-100)
+    dx = 100 * abs(pos_di - neg_di) / (pos_di + neg_di + 1e-10)
+
+    # ── ADX: Wilder's smoothed DX (definitive ADX formula) ─────────────
+    # Wilder's: EMA(α=1/period) of DX; seed with simple mean of first `period` DX values
+    dx_vals = dx.values
+    adx_wild = np.full(len(dx_vals), np.nan)
+    seed_end = adx_period  # index of first valid ADX (0-indexed)
+    if len(dx_vals) > seed_end:
+        adx_wild[seed_end] = np.nanmean(dx_vals[:seed_end])  # seed
+        for n in range(seed_end + 1, len(dx_vals)):
+            adx_wild[n] = adx_wild[n-1] + alpha * (dx_vals[n] - adx_wild[n-1])
+
+    df['adx'] = pd.Series(adx_wild, index=df.index)
+    df['adx_di_plus'] = pos_di
+    df['adx_di_minus'] = neg_di
     return df
 
 # ─── Support / Resistance ──────────────────────────────────────────────────
@@ -314,67 +369,104 @@ def get_hourly_atr_and_pivot(symbol, price):
         s1 = 2 * pivot - last_high
         r2 = pivot + (last_high - last_low)
         s2 = pivot - (last_high - last_low)
-        per_hr = round(h_atr * 0.75, 1)
+        SWING_HOLD_HOURS = 24
+        swing_t1_mult = ATR_CONFIG.get('swing', ATR_CONFIG['intraday'])['t1']
+        swing_t1_dist = atr * swing_t1_mult
+        per_hr = round(swing_t1_dist / SWING_HOLD_HOURS, 1)
         return {
             'hourly_atr': round(h_atr, 2),
             'pivot': round(pivot, 2),
             'r1': round(r1, 2), 's1': round(s1, 2),
             'r2': round(r2, 2), 's2': round(s2, 2),
             'per_hr': per_hr,
+            'swing_t1_mult': swing_t1_mult,
             'pivot_dist_pct': round((price - pivot) / pivot * 100, 2),
         }
     except:
         return None
 
+def get_adx(df, i=None):
+    """Return current ADX, +DI, -DI values.
+    
+    ADX < 20: no trend (choppy/range market)
+    ADX 20-25: weak trend — use with caution
+    ADX > 25: trending market — signals more reliable
+    ADX > 40: extremely strong trend
+    """
+    if i is None:
+        adx = float(df['adx'].iloc[-1])
+        di_plus = float(df['adx_di_plus'].iloc[-1])
+        di_minus = float(df['adx_di_minus'].iloc[-1])
+    else:
+        adx = float(df['adx'].iloc[i])
+        di_plus = float(df['adx_di_plus'].iloc[i])
+        di_minus = float(df['adx_di_minus'].iloc[i])
+    return adx, di_plus, di_minus
+
+
 # ─── Core Signal Engine ──────────────────────────────────────────────────────
-def get_signal(df, i):
+def get_signal(df, i, momentum_mode=False):
     """
     Returns (signal_val, meta_dict, []).
     signal_val: 1=BUY, -1=SELL, 0=RANGE
-    Signal logic: MEAN-REVERSION + SHORT-TERM MOMENTUM.
-    BUY: RSI < 35 (oversold) + MA5>MA20 OR ret5>0 → +1 momentum bonus
-    SELL: RSI > 55 (overbought) + MA5<MA20 AND ret5<0 → +1 momentum bonus
+    
+    Mode: MEAN-REVERSION (default) or MOMENTUM (--momentum-mode)
+    
+    MEAN-REVERSION: BUY when RSI < 38 (oversold) + MA5>MA20 OR ret5>0 → +1 momentum bonus
+                    SELL when RSI > 60 (overbought) + MA5<MA20 AND ret5<0 → +1 momentum bonus
+    
+    MOMENTUM (Option B): BUY when RSI > 70 + MACD bearish-diverging (top-picking)
+                         SELL when RSI < 30 + MACD bullish-diverging (bottom-picking)
+    
+    Option A (ADX Filter): Only trade when ADX > 25 (trending market, not choppy)
     """
     if i < 200:
-        return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0, 'divergence': None, 'reasons': []}, []
+        adx_val, di_plus, di_minus = get_adx(df, i)
+        adx_th = ADX_CONFIG['threshold']
+        adx_trending = adx_val > adx_th if ADX_CONFIG['enabled'] else True
+        return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                    'divergence': None, 'reasons': [],
+                    'adx': round(adx_val, 1), 'adx_trending': adx_trending}, []
 
     row = df.iloc[i]
-    pv = row['Close']
+    pv  = row['Close']
     ma5  = row['ma5']
     ma20 = row['ma20']
     ma50 = row['ma50']
     ma200 = row['ma200']
-    rsi = row['rsi']
+    rsi  = row['rsi']
     macd = row['macd']
     macd_sig = row['macd_sig']
     vol_ratio = row['vol_ratio']
     ret5 = row['ret5']
 
-    # Momentum (v24: short-term trend filter — don't buy falling knives)
-    c_ma5_above_ma20 = ma5 > ma20 if not (pd.isna(ma5) or pd.isna(ma20)) else False
-    c_ret5_positive  = ret5 > 0
-    c_short_term_bull = c_ma5_above_ma20 or c_ret5_positive
-    c_short_term_bear = not c_short_term_bull
+    # ── Option A: ADX Trend Filter ───────────────────────────────────────
+    adx_th = ADX_CONFIG['threshold']
+    adx_enabled = ADX_CONFIG['enabled']
+    adx, di_plus, di_minus = get_adx(df, i)
+    adx_trending = adx > adx_th if adx_enabled else True
+    adx_weak_reason = f"⚠️ ADX={adx:.0f}<{adx_th} (choppy — no trend)" if (adx_enabled and not adx_trending) else None
 
-    c_price_ma20 = pv > ma20
+    # Momentum Mode (Option B) — check first ───────────────────────────────
+    if momentum_mode or MOMENTUM_CONFIG['enabled']:
+        return _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus)
+
+    # ── Standard Mean-Reversion Logic ───────────────────────────────────
+    c_price_ma20 = pv > ma20 if not (pd.isna(ma5) or pd.isna(ma20)) else False
     c_price_ma50 = pv > ma50
     c_ma50_ma200 = ma50 > ma200
-    c_rsi_buy = rsi < RSI_CONFIG['buy_strict']   # 35: only true oversold
-    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']  # 55: overbought zone
+    c_rsi_buy  = rsi < RSI_CONFIG['buy_strict']
+    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
     c_macd = macd > macd_sig
     c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
     c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
-    # v24: short-term momentum for BUY (don't buy falling knives — require uptick)
     c_ma5_above_ma20 = (not pd.isna(ma5) and not pd.isna(ma20) and ma5 > ma20)
     c_ret5_positive = ret5 > 0
 
-    buy_cnt = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
-    # Bonus: if RSI < 35 AND short-term uptick (MA5>MA20 OR ret5>0) → extra +1
+    buy_cnt  = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
+    sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200, c_rsi_sell, not c_macd, c_vol, not c_mom])
     if c_rsi_buy and (c_ma5_above_ma20 or c_ret5_positive):
         buy_cnt += 1
-
-    sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200, c_rsi_sell, not c_macd, c_vol, not c_mom])
-    # Bonus: if RSI > 55 AND price below MA20 → extra +1
     if c_rsi_sell and not c_price_ma20:
         sell_cnt += 1
 
@@ -383,27 +475,134 @@ def get_signal(df, i):
         buy_cnt += 2
 
     # RSI Guards
-    # Block SELL when RSI < 38 (deeply oversold — don't short bounce)
     if rsi < RSI_CONFIG['sell_relaxed']:
         sell_cnt = 0
-    # RSI 35-38 with price > MA20: oversold bounce zone — don't sell into recovery
     elif rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
         sell_cnt = 0
 
     reasons = build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,
-                            c_macd, c_vol, c_mom, divergence, 'BUY')
+                             c_macd, c_vol, c_mom, divergence, 'BUY')
     reasons_sell = build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,
-                                 c_macd, c_vol, c_mom, divergence, 'SELL')
+                                  c_macd, c_vol, c_mom, divergence, 'SELL')
+
+    # ── Option A: ADX filter — suppress signals in choppy markets ─────
+    adx_note = f"ADX={adx:.0f}" if adx_enabled else "ADX=—"
+    if adx_weak_reason:
+        reasons.append(adx_weak_reason)
+        reasons_sell.append(adx_weak_reason)
 
     if buy_cnt >= SIGNAL_CONFIG['min_confirmations']:
+        if adx_enabled and not adx_trending:
+            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                        'divergence': divergence, 'reasons': [f"⛔ BLOCKED: {adx_weak_reason}"]}, []
         return 1, {'signal': 'BUY', 'buy_cnt': buy_cnt, 'sell_cnt': sell_cnt,
-                   'divergence': divergence, 'reasons': reasons}, []
+                   'divergence': divergence, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending}, []
     elif sell_cnt >= SIGNAL_CONFIG['min_confirmations']:
+        if adx_enabled and not adx_trending:
+            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                        'divergence': divergence, 'reasons': [f"⛔ BLOCKED: {adx_weak_reason}"]}, []
         return -1, {'signal': 'SELL', 'buy_cnt': buy_cnt, 'sell_cnt': sell_cnt,
-                    'divergence': divergence, 'reasons': reasons_sell}, []
+                    'divergence': divergence, 'reasons': reasons_sell,
+                    'adx': round(adx, 1), 'adx_trending': adx_trending}, []
     else:
+        extra = [f"⛔ BLOCKED: {adx_weak_reason}"] if adx_weak_reason else []
         return 0, {'signal': 'RANGE', 'buy_cnt': buy_cnt, 'sell_cnt': sell_cnt,
-                   'divergence': divergence, 'reasons': []}, []
+                   'divergence': divergence, 'reasons': extra,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+def _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus):
+    """Option B: Momentum Mode — top/bottom picking with RSI + MACD divergence.
+    
+    BUY:  RSI > 70 (overbought) + MACD bearish-diverging → top-pick, ride the downmove
+    SELL: RSI < 30 (oversold)  + MACD bullish-diverging  → bottom-pick, ride the bounce
+    ADX > 25 confirms trend strength.
+    
+    Fix v31: divergence must align with the RSI peak/trough zone, not just any 20-bar divergence.
+    """
+    lookback = 30  # look 30 bars back for RSI peak/trough aligned divergence
+    end_idx = max(0, i - lookback)
+    rsi_vals = df['rsi'].iloc[end_idx:i+1].values
+    price_vals = df['Close'].iloc[end_idx:i+1].values
+    macd_vals = df['macd'].iloc[end_idx:i+1].values
+    macd_sig_vals = df['macd_sig'].iloc[end_idx:i+1].values
+
+    rsi = float(df['rsi'].iloc[i])
+    rsi_overbought = rsi > MOMENTUM_CONFIG['rsi_overbought']
+    rsi_oversold   = rsi < MOMENTUM_CONFIG['rsi_oversold']
+
+    reasons = []
+    adx_note = f"ADX={adx:.0f}"
+
+    # ── Detect aligned bearish divergence (for momentum BUY) ─────────────────────
+    # Price made a new high in the lookback, RSI did NOT confirm → bearish divergence
+    bear_div = False
+    if len(rsi_vals) >= 5 and len(price_vals) >= 5:
+        price_peaks = np.where(np.diff(np.r_[False, price_vals > np.roll(price_vals, 1)]) > 0)[0]
+        rsi_peaks  = np.where(np.diff(np.r_[False, rsi_vals > np.roll(rsi_vals, 1)]) > 0)[0]
+        if len(price_peaks) >= 2 and len(rsi_peaks) >= 1:
+            last_pp = price_peaks[-1]
+            prev_pp = price_peaks[-2] if len(price_peaks) >= 2 else price_peaks[0]
+            last_rp  = rsi_peaks[-1]
+            price_ok  = price_vals[-1] > price_vals[prev_pp]  # new high
+            rsi_ok    = last_rp <= last_pp and rsi_vals[last_rp] <= rsi_vals[last_pp]  # RSI failed to confirm
+            bear_div  = price_ok and rsi_ok
+
+    # ── Detect aligned bullish divergence (for momentum SELL) ───────────────────
+    bull_div = False
+    if len(rsi_vals) >= 5 and len(price_vals) >= 5:
+        price_troughs = np.where(np.diff(np.r_[False, price_vals < np.roll(price_vals, 1)]) > 0)[0]
+        rsi_troughs  = np.where(np.diff(np.r_[False, rsi_vals < np.roll(rsi_vals, 1)]) > 0)[0]
+        if len(price_troughs) >= 2 and len(rsi_troughs) >= 1:
+            last_pt = price_troughs[-1]
+            prev_pt = price_troughs[-2] if len(price_troughs) >= 2 else price_troughs[0]
+            last_rt  = rsi_troughs[-1]
+            price_ok  = price_vals[-1] < price_vals[prev_pt]  # new low
+            rsi_ok    = last_rt <= last_pt and rsi_vals[last_rt] <= rsi_vals[prev_pt]  # RSI failed to confirm
+            bull_div  = price_ok and rsi_ok
+
+    bear_div = bear_div if MOMENTUM_CONFIG['macd_bear_div'] else True
+    bull_div = bull_div if MOMENTUM_CONFIG['macd_bull_div'] else True
+
+    # Momentum BUY: RSI > 70 + bearish divergence confirmed
+    if rsi_overbought and bear_div:
+        if not adx_trending and ADX_CONFIG.get('enabled'):
+            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                       'divergence': 'BEARISH',
+                       'reasons': [f"⛔ MOMENTUM BUY blocked: {adx_note}<{ADX_CONFIG['threshold']} (not trending)"],
+                       'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+        reasons = [
+            f"📍 MOMENTUM BUY (top-pick) | RSI={rsi:.0f}>70 (overbought)",
+            f"   MACD bearish-divergence confirmed → expect drop",
+            f"   {adx_note} {'✅ trending' if adx_trending else '⚠️ weak trend'}",
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': 5, 'sell_cnt': 0,
+                   'divergence': 'BEARISH', 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'MOMENTUM'}, []
+
+    # Momentum SELL: RSI < 30 + bullish divergence confirmed
+    if rsi_oversold and bull_div:
+        if not adx_trending and ADX_CONFIG.get('enabled'):
+            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                       'divergence': 'BULLISH',
+                       'reasons': [f"⛔ MOMENTUM SELL blocked: {adx_note}<{ADX_CONFIG['threshold']} (not trending)"],
+                       'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+        reasons = [
+            f"📍 MOMENTUM SELL (bottom-pick) | RSI={rsi:.0f}<30 (oversold)",
+            f"   MACD bullish-divergence confirmed → expect bounce",
+            f"   {adx_note} {'✅ trending' if adx_trending else '⚠️ weak trend'}",
+        ]
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': 5,
+                    'divergence': 'BULLISH', 'reasons': reasons,
+                    'adx': round(adx, 1), 'adx_trending': adx_trending,
+                    'mode': 'MOMENTUM'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+               'divergence': None,
+               'reasons': [f"No momentum signal (RSI={rsi:.0f}, {adx_note})"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
 
 def build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,
                   c_macd, c_vol, c_mom, divergence, signal):
@@ -512,10 +711,12 @@ def build_ml_features(df, idx=None):
     return np.array([all_f])
 
 # ─── 9-Stage AI Opinion Pipeline ───────────────────────────────────────────────
-def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5, df):
+def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5, df, momentum_mode=False):
     """
     Full 9-stage AI opinion pipeline.
     Stages: Market Regime → News Sentiment → Scanner → Validator → Options → Risk → Execution → Replay → Learning
+    
+    momentum_mode: if True, switches to momentum mode logic (top/bottom picking)
     """
     from datetime import datetime
 
@@ -524,17 +725,50 @@ def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5
     market_regime = mkt['regime']
     regime_score = mkt['score']
 
-    # Stage 2: News Sentiment (proxy via ret5)
-    if ret5 > 0.02: news_score = 30
-    elif ret5 > 0: news_score = 15
-    elif ret5 < -0.02: news_score = -30
-    else: news_score = -5
+    # ── ADX Trend Context (Option A) ─────────────────────────────────────────
+    adx, di_plus, di_minus = get_adx(df)
+    adx_th = ADX_CONFIG['threshold']
+    adx_trending = adx > adx_th
+    if adx < 20: adx_label = "CHOPPY (no trend)"
+    elif adx < 25: adx_label = "WEAK TREND"
+    elif adx < 40: adx_label = "TRENDING ✅"
+    else: adx_label = "STRONG TREND 🔥"
+    adx_bonus = 20 if adx_trending else -15   # trending = +20, choppy = -15
+
+    # Stage 2: News Sentiment (proxy via VIX/IndiaVIX + ADX regime context)
+    # VIX > 25 = fear (high volatility, mean-reversion works better)
+    # VIX > 35 = extreme fear (reversal zones)
+    # VIX < 15 = greed/complacency (trending, momentum works better)
+    news_score = 0
+    try:
+        vix = yf.Ticker("^INDIAVIX").history(period='5d')
+        if vix is not None and len(vix) > 0:
+            vix_val = float(vix['Close'].iloc[-1])
+            if vix_val > 35: news_score = -40   # extreme fear — reversal likely
+            elif vix_val > 25: news_score = -20  # fear — mean-reversion favorable
+            elif vix_val < 15: news_score = 25   # complacency — trend/momentum favorable
+            else: news_score = 5
+            news_score = int(news_score)
+    except Exception:
+        # Fallback: ADX regime as news/market health proxy
+        if adx_trending: news_score = 15   # trending market = positive backdrop
+        else: news_score = -10            # choppy market = negative for news
 
     # Stage 3: Stock Scanner (setup quality)
     setup_score = 0
-    if rsi < 40: setup_score += 25
-    elif rsi < RSI_CONFIG['buy_strict']: setup_score += 15
-    elif rsi > 55: setup_score -= 20
+    # RSI banded scoring — true oversold/overbought score highest
+    if momentum_mode:
+        # Momentum mode: RSI>70 or RSI<30 scores high (not mid-range)
+        if rsi > MOMENTUM_CONFIG['rsi_overbought']: setup_score += 25
+        elif rsi < MOMENTUM_CONFIG['rsi_oversold']: setup_score += 25
+        elif rsi < 40: setup_score += 10
+        elif rsi > 60: setup_score += 10
+    else:
+        # Mean-reversion mode: RSI<38 or RSI>60 scores high
+        if rsi < RSI_CONFIG['buy_strict']:   setup_score += 25
+        elif rsi < 40:                        setup_score += 15
+        elif rsi > RSI_CONFIG['sell_strict']: setup_score -= 25
+        elif rsi > 55:                         setup_score -= 15
     if macd > macd_sig: setup_score += 20
     else: setup_score -= 15
     if vol_ratio > 1.5: setup_score += 15
@@ -542,6 +776,8 @@ def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5
     if not (np.isnan(df["ma20"].iloc[-1]) or np.isnan(df["ma50"].iloc[-1]) or np.isnan(df["ma200"].iloc[-1])):
         ma_bonus = sum(df["Close"].iloc[-1] > df[f"ma{w}"].iloc[-1] for w in [20, 50, 200]) * 10
         setup_score += ma_bonus
+    # ADX trend bonus (Option A)
+    setup_score += adx_bonus
 
     # Stage 4: Trade Validator (S/R + volume)
     support = df['Low'].rolling(20).min().iloc[-1]
@@ -557,8 +793,11 @@ def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5
         validator = "CAUTION"; validator_bonus = 0
 
     # Stage 5: Options Flow (proxy via RSI)
-    if rsi < 40: options_signal = "BEARISH_SENTIMENT"; options_bias = -10
-    elif rsi > 55: options_signal = "BULLISH_SENTIMENT"; options_bias = 10
+    # RSI-based sentiment (bearish = cheap options premium, bullish = expensive)
+    if rsi < RSI_CONFIG['buy_strict']:  options_signal = "BEARISH_SENTIMENT"; options_bias = -10
+    elif rsi < 40:                       options_signal = "MILD_BEARISH";     options_bias = -5
+    elif rsi > RSI_CONFIG['sell_strict']: options_signal = "BULLISH_SENTIMENT"; options_bias = 10
+    elif rsi > 55:                        options_signal = "MILD_BULLISH";    options_bias = 5
     else: options_signal = "NEUTRAL"; options_bias = 0
 
     # Stage 6: Risk Manager (ATR-based)
@@ -589,7 +828,7 @@ def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5
     # Stage 9: Learning (RSI-trend alignment correction)
     correction_factor = 1.0
     if (rsi < 50 and ret5 > 0) or (rsi > 50 and ret5 < 0): correction_factor = 0.9
-    if rsi > 55 or rsi < 35: correction_factor = 0.85
+    if rsi > RSI_CONFIG['sell_strict'] or rsi < RSI_CONFIG['buy_strict']: correction_factor = 0.85
 
     # Compute total
     scores = {
@@ -616,7 +855,12 @@ def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5
         'stages': {
             '1_market_regime': {'value': market_regime, 'score': int(regime_score)},
             '2_news_sentiment': {'score': int(news_score)},
-            '3_stock_scanner': {'score': int(setup_score)},
+            '3_stock_scanner': {'score': int(setup_score),
+                                 'adx': float(round(adx, 1)),
+                                 'adx_label': adx_label,
+                                 'adx_trending': adx_trending,
+                                 'di_plus': float(round(di_plus, 1)),
+                                 'di_minus': float(round(di_minus, 1)),},
             '4_trade_validator': {'value': validator, 'score': int(validator_bonus),
                                    'support': float(round(support, 2)), 'resistance': float(round(resistance, 2))},
             '5_options_flow': {'value': options_signal, 'score': int(options_bias)},

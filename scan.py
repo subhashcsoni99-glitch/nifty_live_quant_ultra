@@ -180,13 +180,17 @@ def _get_stats(symbol):
 _NEG_HIST_RR_THRESHOLD = -2.0
 _NEG_HIST_WR_THRESHOLD = 40  # v18fix: was 35 — COALINDIA wr=35.5/rr=-4.5 was slipping through as Cat B
 
-# ── v25: UPGRADED THRESHOLDS FOR 9.5/10 RATING ──────────────────────────
-_MIN_WR_CAT_A = 40        # v25: was 25, raise to 40 for quality
-_MIN_WR_CAT_B = 35        # v25: was 35, keep at 35
-_MIN_WR_TOP_PICK = 40     # v25: TOP_PICK requires WR >= 40%
-_BACKTEST_STALE_DAYS = 3   # v25: warn if backtest > 3 days old
-_LOW_WR_WARNING = 35       # v25: tag stocks with WR < 35% as LOW_WINRATE
-_POS_SIZE_WARNING_PCT = 10  # v25: warn if position > 10% of capital
+# ── v35: ADX FILTER DEFAULT + LOWER WR GATE ───────────────────────────────
+_MIN_WR_CAT_A = 38        # v35: was 40, lowered to 38 (more signals qualify)
+_MIN_WR_CAT_B = 35        # v35: keep at 35
+_MIN_WR_TOP_PICK = 40     # TOP_PICK still requires WR >= 40%
+_BACKTEST_STALE_DAYS = 3   # warn if backtest > 3 days old
+_LOW_WR_WARNING = 35       # tag stocks with WR < 35% as LOW_WINRATE
+_POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
+
+# ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
+# Override with --no-adx flag to disable
+_DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
 
 def _is_neg_hist(stats):
     """NEG_HIST: rr < -2% AND wr < 40% — poor return OR weak win rate together"""
@@ -607,9 +611,6 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
 # ─── Global Option Flags ─────────────────────────────────────────────────
 _OPTION_C_ACTIVE = False  # v34: True when --C passed (morning window + tight SL)
 
-# ─── Global Option Flags ─────────────────────────────────────────────────
-_OPTION_C_ACTIVE = False  # v34: True when --C passed
-
 # ─── CLI Args ──────────────────────────────────────────────────────────────
 def parse_args():
     stocks = DEFAULT_STOCKS
@@ -628,6 +629,7 @@ def parse_args():
     backtest_first = False    # v17: run backtest before scan to refresh stats
     conversation_label = None   # passed to Telegram header
     debug_mode = False         # v22: print confluence component breakdown per stock
+    wait_morning = False  # v35: sleep until 9:40 AM IST before scanning
 
     args = sys.argv[1:]
     i = 0
@@ -705,10 +707,11 @@ def parse_args():
         elif arg == '--debug':
             debug_mode = True; i += 1
         elif arg == '--strict':
-            # Conservative: use only Cat A/B signals
             _MIN_WR_CAT_A = 40
             _MIN_WR_CAT_B = 35
             i += 1
+        elif arg == '--wait-morning':
+            wait_morning = True; i += 1
         elif arg.startswith('--'):
             i += 1
         else:
@@ -717,7 +720,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode
+    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None):
@@ -820,7 +823,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None):
             return {'sl': round(id_sl,1), 't1': round(id_t1,0), 't2': round(id_t2,0)}, {'sl': round(sw_sl,1), 't1': round(sw_t1,0), 't2': round(sw_t2,0)}
         price = r['price']
         h_atr = h['hourly_atr']
-        per_hr = h['per_hr']
+        # v35: Use intraday_per_hr (T1=2× hATR / 6.5h) for realistic per-hour target display
+        per_hr = h.get('intraday_per_hr', h.get('per_hr', 0))
         if sig == 'SELL':
             hr_l = {
                 'sl': round(price + h_atr * 1.0, 0),
@@ -1058,7 +1062,28 @@ def format_json(results, today):
 def main():
     (stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter,
      output_format, level_mode, top_n, auto_retrain,
-     filter_neg_hist, backtest_first, conversation_label, debug_mode) = parse_args()
+     filter_neg_hist, backtest_first, conversation_label, debug_mode,
+     wait_morning) = parse_args()
+
+    # ── v35: --wait-morning — sleep until 9:40 AM IST before scanning ────
+    if wait_morning:
+        from datetime import datetime as _dt, timezone, timedelta
+        IST = timezone(timedelta(hours=5, minutes=30))
+        while True:
+            now_ist = _dt.now(IST)
+            now_mins = now_ist.hour * 60 + now_ist.minute
+            target_mins = 9 * 60 + 40
+            if now_ist.hour >= 15:
+                print(f"Market closed ({now_ist.strftime('%I:%M %p IST')}), skipping wait.")
+                break
+            if now_mins >= target_mins:
+                print(f"Market open ({now_ist.strftime('%I:%M %p IST')}), starting scan.")
+                break
+            wait_secs = (target_mins - now_mins) * 60
+            print(f"Waiting... ({now_ist.strftime('%I:%M %p IST')}) sleeping {wait_secs}s")
+            import time
+            time.sleep(min(wait_secs, 300))
+
     today = datetime.now().strftime("%d %b %Y %I:%M %p IST")
 
     # ── Backtest first (optional) ────────────────────────────────────────

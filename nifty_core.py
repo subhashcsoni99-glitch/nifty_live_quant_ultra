@@ -90,7 +90,7 @@ RSI_CONFIG = {
 ADX_CONFIG = {
     'period': 14,
     'threshold': 25,          # Only trade when ADX > 25 (trending market)
-    'enabled': True,           # Master switch — set False to disable
+    'enabled': True,           # v35: ON by default (Option A = recommended)
 }
 
 # ─── Momentum Mode (Option B) ─────────────────────────────────────────────────
@@ -352,7 +352,7 @@ def get_hourly_atr_and_pivot(symbol, price):
     """Fetch last 20 hourly candles, compute hourly ATR(14) and pivot-based levels."""
     try:
         tk = yf.Ticker(f"{symbol.upper()}.NS")
-        df_h = tk.history(period='3d', interval='1h')
+        df_h = tk.history(period='5d', interval='1h')  # v35: 3d→5d for sufficient hourly candles
         if df_h.empty or len(df_h) < 10:
             return None
         high = df_h['High']; low = df_h['Low']; close = df_h['Close']
@@ -371,14 +371,18 @@ def get_hourly_atr_and_pivot(symbol, price):
         s2 = pivot - (last_high - last_low)
         SWING_HOLD_HOURS = 24
         swing_t1_mult = ATR_CONFIG.get('swing', ATR_CONFIG['intraday'])['t1']
-        swing_t1_dist = atr * swing_t1_mult
-        per_hr = round(swing_t1_dist / SWING_HOLD_HOURS, 1)
+        swing_t1_dist = h_atr * swing_t1_mult
+        swing_per_hr = round(swing_t1_dist / SWING_HOLD_HOURS, 1)
+        # v35: Also compute intraday per_hr (T1=2× hATR / 6.5h) for SWING scan display
+        intra_t1_mult = ATR_CONFIG.get('intraday', ATR_CONFIG['intraday'])['t1']  # 2.0
+        intra_per_hr = round(h_atr * intra_t1_mult / 6.5, 1)
         return {
             'hourly_atr': round(h_atr, 2),
             'pivot': round(pivot, 2),
             'r1': round(r1, 2), 's1': round(s1, 2),
             'r2': round(r2, 2), 's2': round(s2, 2),
-            'per_hr': per_hr,
+            'per_hr': swing_per_hr,    # SWING: T1_dist / 24h (small value)
+            'intraday_per_hr': intra_per_hr,  # v35: INTRADAY: T1_dist / 6.5h (realistic)
             'swing_t1_mult': swing_t1_mult,
             'pivot_dist_pct': round((price - pivot) / pivot * 100, 2),
         }

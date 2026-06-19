@@ -1,0 +1,2 @@
+timestamp,symbol,signal,entry,sl,t1,t2,per_hr,conf,zone,signal_type,rsi5,rsi15,hourly_rsi,day_high,day_low,result,pnl_pct
+2026-06-19 21:13:14,BRITANNIA,1,5211.0,5175.1,5246.9,5270.82,0,80,🌆 AFTERNOON,EMA_CROSS ▲++rsi15+hRSI,67.4,39.0,39.1,5224.5,5180.0,,

@@ -6,7 +6,7 @@ ATR levels, 9-stage AI pipeline, S/R, fundamental scoring.
 All scripts import from here. ONE SOURCE OF TRUTH.
 
 Changes v3:
-- RSI buy_strict: 45 → 38 (true oversold, not mildly bearish)
+- RSI buy_strict: 45 → 38 → 30 (v36: true deep oversold) (true oversold, not mildly bearish)
 - RSI sell_relaxed: 35 → 40 (block sell below RSI 40 — deeply oversold bounce zone)
 - Label definition note added to docstring
 """
@@ -78,7 +78,7 @@ ATR_CONFIG = {
 # These two signals measure different things: mean-reversion vs momentum.
 RSI_CONFIG = {
     'period': 14,
-    'buy_strict':  38,   # RSI < 38 = oversold
+    'buy_strict':  30,   # RSI < 30 = oversold  (v36: was 38 — true deep oversold)
     'buy_relaxed': 65,   # allow BUY up to RSI 65 in strong uptrend
     'sell_strict': 60,  # RSI > 60 = overbought  (v30: was 55 — tightened)
     'sell_relaxed': 40,  # block SELL below 40 (deeply oversold bounce zone)  (v30: was 36)
@@ -89,7 +89,7 @@ RSI_CONFIG = {
 # ADX < 20 = no trend (choppy), ADX 20-25 = weak trend, ADX > 25 = trending
 ADX_CONFIG = {
     'period': 14,
-    'threshold': 25,          # Only trade when ADX > 25 (trending market)
+    'threshold': 20,          # Only trade when ADX > 20 (v36: was 25 — 3-5x more signals) (trending market)
     'enabled': True,           # v35: ON by default (Option A = recommended)
 }
 
@@ -374,7 +374,7 @@ def get_hourly_atr_and_pivot(symbol, price):
         swing_t1_dist = h_atr * swing_t1_mult
         swing_per_hr = round(swing_t1_dist / SWING_HOLD_HOURS, 1)
         # v35: Also compute intraday per_hr (T1=2× hATR / 6.5h) for SWING scan display
-        intra_t1_mult = ATR_CONFIG.get('intraday', ATR_CONFIG['intraday'])['t1']  # 2.0
+        intra_t1_mult = ATR_CONFIG['intraday']['t1']  # 2.0
         intra_per_hr = round(h_atr * intra_t1_mult / 6.5, 1)
         return {
             'hourly_atr': round(h_atr, 2),
@@ -455,12 +455,18 @@ def get_signal(df, i, momentum_mode=False):
     if momentum_mode or MOMENTUM_CONFIG['enabled']:
         return _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus)
 
+    # ── P1-D: 52-Week Low Filter — avoid falling knives ─────────────────
+    # If price within 3% of 52-week low → BUY blocked (falling knife risk)
+    low_52w = df['Low'].iloc[max(0, i-252):i+1].min()
+    near_52w_low = low_52w > 0 and pv < low_52w * 1.03
+
     # ── Standard Mean-Reversion Logic ───────────────────────────────────
     c_price_ma20 = pv > ma20 if not (pd.isna(ma5) or pd.isna(ma20)) else False
     c_price_ma50 = pv > ma50
     c_ma50_ma200 = ma50 > ma200
     c_rsi_buy  = rsi < RSI_CONFIG['buy_strict']
     c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
+    c_rsi_bear = rsi > 70   # v36 P1-C: RSI>70 = extreme overbought → bearish short
     c_macd = macd > macd_sig
     c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
     c_mom = ret5 > SIGNAL_CONFIG['momentum_zero']
@@ -473,6 +479,8 @@ def get_signal(df, i, momentum_mode=False):
         buy_cnt += 1
     if c_rsi_sell and not c_price_ma20:
         sell_cnt += 1
+    if c_rsi_bear:
+        sell_cnt += 2   # v36 P1-C: RSI>70 adds 2 pts → independent short signal
 
     divergence = detect_divergence(df.iloc[:i+1])
     if divergence == "BULLISH":
@@ -483,6 +491,22 @@ def get_signal(df, i, momentum_mode=False):
         sell_cnt = 0
     elif rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
         sell_cnt = 0
+
+    # v37 P0-4: Independent RSI>70 SHORT — fires BEFORE RSI>65 BUY block
+    # RSI>70 = extreme overbought = direct SHORT regardless of ADX/MA alignment
+    # ADX filter BYPASSED for RSI>70 — extreme overbought overrides trend
+    if rsi > MOMENTUM_CONFIG['rsi_overbought']:
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': 4,
+                    'divergence': divergence,
+                    'reasons': [f"🎯 RSI={rsi:.0f}>70 (extreme overbought — direct SHORT)",
+                                 f"ADX={adx:.0f} (trend={'✅' if adx_trending else '❌'})"],
+                    'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+    # v36 P1-1: Block BUY when RSI > buy_relaxed (65-70 range — mild overbought)
+    if rsi > RSI_CONFIG['buy_relaxed'] and buy_cnt >= SIGNAL_CONFIG['min_confirmations']:
+        return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                    'divergence': divergence,
+                    'reasons': [f"⛔ BLOCKED: RSI={rsi:.0f}>65 (overbought — momentum chasing)"]}, []
 
     reasons = build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,
                              c_macd, c_vol, c_mom, divergence, 'BUY')
@@ -499,6 +523,11 @@ def get_signal(df, i, momentum_mode=False):
         if adx_enabled and not adx_trending:
             return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
                         'divergence': divergence, 'reasons': [f"⛔ BLOCKED: {adx_weak_reason}"]}, []
+        # v36 P1-D: block BUY when near 52-week low (falling knife risk)
+        if near_52w_low:
+            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+                        'divergence': divergence,
+                        'reasons': [f"⛔ BLOCKED: near 52w low (₹{pv:.0f}/₹{low_52w:.0f}, within 3%)"]}, []
         return 1, {'signal': 'BUY', 'buy_cnt': buy_cnt, 'sell_cnt': sell_cnt,
                    'divergence': divergence, 'reasons': reasons,
                    'adx': round(adx, 1), 'adx_trending': adx_trending}, []

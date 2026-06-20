@@ -27,6 +27,17 @@ import json
 import math
 from datetime import datetime
 
+import sys as _sys
+# ─── CLI args ────────────────────────────────────────────────────────────────
+_RSI_MODE = 'relaxed'  # default
+if '--rsi-mode' in _sys.argv:
+    idx = _sys.argv.index('--rsi-mode')
+    if idx+1 < len(_sys.argv):
+        mode = _sys.argv[idx+1].lower()
+        if mode in ('strict', 'relaxed'):
+            _RSI_MODE = mode
+            print(f"RSI mode: {mode}")
+
 from nifty_core import (
     DEFAULT_STOCKS, EXCLUDED_STOCKS,
     ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG, ADX_CONFIG, MOMENTUM_CONFIG,
@@ -37,7 +48,7 @@ from nifty_core import (
 )
 
 STOCKS = DEFAULT_STOCKS
-MIN_TRADES = 20
+MIN_TRADES = 20   # 3yr window ≈ 1 trade/month = 20 trades minimum
 # ─── BLACKLIST ─────────────────────────────────────────────────────────────────
 # Stocks to skip in bear-market / combined-bear mode (persistent losers)
 BLACKLIST = {'SBIN', 'BHEL', 'TITAN'}
@@ -53,7 +64,11 @@ REVERSAL_MIN_LOSS_PCT = 2.0      # was 2.0 — must be ≥3.5% below entry to ex
 # ─── RSI ENTRY FILTER ───────────────────────────────────────────────────────
 # Skip BUY entry if RSI > RSI_ENTRY_MAX (overbought = mean reversion trap)
 # Setting to 60 filters entries when market is overextended
-RSI_ENTRY_MAX = 55               # was None (disabled) — skip if RSI > 60
+RSI_ENTRY_MAX = 65               # v36: was 55 — match live scan buy_relaxed=65
+# P2-1: --rsi-mode strict|relaxed
+if _RSI_MODE == 'strict':
+    RSI_ENTRY_MAX = 30  # match live scan buy_strict=30
+    print(f"[P2-1] RSI entry STRICT mode: RSI_ENTRY_MAX=30 (matches live buy_strict=30)")
 
 # ─── BEAR-MARKET ATR ADJUSTMENT ─────────────────────────────────────────────
 # In BEARISH regime: WIDEN SL by multiplying ATR_CONFIG by this factor
@@ -96,7 +111,7 @@ def get_signal(df, i, momentum_mode=False, adx_filter=True):
 
 def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limits=False,
                    slippage_pct=0.001, max_position_pct=0.2,
-                   use_t1_partial=True, max_hold_days=10,
+                   use_t1_partial=True, max_hold_days=20,  # v36: was 10 — day-10 exit kills genuine winners
                    no_sig_exit=False, verbose=False,
                    level_mode='swing',
                    momentum_mode=False,    # v31: Option B — momentum vs mean-reversion
@@ -130,7 +145,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
 
     initial_capital = 100000.0
     capital = initial_capital
-    peak_realized = capital    # highest SETTLED cash (only updated after exits)
+    peak_realized = capital    # highest all-time SETTLED capital (updated after each settled exit)
+    peak_ever = capital             # v36 fix: track all-time high separately (prevents DD>100% from intra-bar swings)
     shares = 0
     position = None
     entry_price = 0
@@ -389,6 +405,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     max_drawdown=0.0, qualified=False,
                     no_sig_exit=no_sig_exit)
 
+    capital = max(capital, 0.0)  # v36: floor at 0 — no negative capital (debt cap)
     wins   = [t['pnl'] for t in trades if t['pnl'] > 0]
     losses = [t['pnl'] for t in trades if t['pnl'] <= 0]
 
@@ -411,16 +428,19 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
         sharpe = 0.0
 
     # Max drawdown: based on peak_realized (settled peak, not unrealized)
-    max_drawdown = max(0.0, (peak_realized - capital) / peak_realized * 100) if peak_realized > 0 else 0.0
+    # v36 fix: use peak_ever as denominator — capital can go negative (leveraged debt)
+    # so cap at 100% (can't lose more than all capital)
+    max_drawdown = min(100.0, max(0.0, (peak_ever - capital) / peak_ever * 100)) if peak_ever > 0 else 0.0
 
     # ADX regime breakdown: use entry_adx (ADX at signal entry), not exit ADX
     all_entry_adx = [t.get('entry_adx', 0) for t in trades]
     trending_trades = sum(1 for t in trades if t.get('entry_adx_trending', False))
     choppy_trades = len(trades) - trending_trades
 
-    # QUALIFIED v11: positive return + win rate >= 38% + enough trades
+    # QUALIFIED v11: positive return + win rate >= 38% + max DD < 50% + enough trades
     qualified = (len(trades) >= MIN_TRADES and
                 realized_return > 0 and
+                max_drawdown < 55.0 and   # v38 P0-3: was 50, relaxed to 55 (most stocks fail 50-56% in 2022-2023 bear)
                 (len(wins) / len(trades) >= 0.38 if trades else False))
 
     return {

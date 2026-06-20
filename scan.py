@@ -38,7 +38,12 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from nifty_categorize import categorize_results as _categorize, get_primary_trigger
+from nifty_categorize import (
+    categorize_results as _categorize,
+    get_primary_trigger as _get_primary_trigger,
+    _wr_badge, _stale_tier, _is_neg_hist, _is_poor_history,
+    _regime_coherence, calc_confluence_score, _add_tag,
+)
 from nifty_core import (
     NIFTY50_STOCKS, NIFTY100_STOCKS,
     EXCLUDED_STOCKS, GOOD_STOCKS, SCANNABLE_STOCKS, DEFAULT_STOCKS,
@@ -400,7 +405,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, stream_output
+    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, _MAX_POS_PCT_OVERRIDE, stream_output
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing'):

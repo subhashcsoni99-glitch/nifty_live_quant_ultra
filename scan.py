@@ -64,6 +64,27 @@ from nifty_core import (
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(SCRIPT_DIR, 'models')
 
+# ─── Market Hours (NEW-1/NEW-2) ────────────────────────────────────────────
+# NSE market hours: 9:00 AM – 3:30 PM IST
+MARKET_OPEN_HOUR,   MARKET_OPEN_MIN   = 9,  0    # market open
+MARKET_CLOSE_HOUR,  MARKET_CLOSE_MIN  = 15, 30   # NEW-2: configurable (handle early closes)
+_MARKET_OPEN_MINS  = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MIN     # 540
+_MARKET_CLOSE_MINS = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MIN   # 930
+
+def _is_market_open():
+    """NEW-1: Check if NSE is currently open. Returns (bool, reason_str)."""
+    from datetime import datetime as _dt, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_ist = _dt.now(IST)
+    now_mins = now_ist.hour * 60 + now_ist.minute
+    if now_mins < _MARKET_OPEN_MINS:
+        return False, "pre-market"
+    elif now_mins >= _MARKET_CLOSE_MINS:
+        return False, "post-market"
+    else:
+        return True, "live"
+
+
 # ─── ML Prediction (v17: sklearn version check + graceful failure) ───────────
 ML_LOG = logging.getLogger('nifty_ml')
 ML_LOG.setLevel(logging.WARNING)
@@ -143,7 +164,7 @@ def _retrain_model(sym):
 # ─── Backtest Stats Cache (v17: proper time.time() TTL) ──────────────────────
 _STATS_CACHE = None
 _STATS_LOADED_AT = 0  # v18fix: was None → reload logic never fired
-_STATS_TTL = 3600  # 1 hour
+_STATS_TTL = 300  # NEW-3: was 3600 (1hr) → 300s (5min) for always-fresh stats
 
 def _get_stats(symbol):
     """Load stats from most recent backtest JSON. Cache expires after _STATS_TTL seconds."""
@@ -410,6 +431,8 @@ def parse_args():
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing'):
+    # NEW-1: suppress BUY/SELL signals when market is closed
+    market_open, market_reason = _is_market_open()
     top = top_n if top_n else 3
     buy = [r for r in results if r['signal'] == 'BUY']
     sell = [r for r in results if r['signal'] == 'SELL']
@@ -449,8 +472,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     breadth = f" ({adv}↑/{dec}↓)" if (adv + dec) > 0 else ""
     bullish_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BULLISH')
     bear_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BEARISH')
-    now_h = datetime.now().hour + datetime.now().minute / 60
-    session_icon = "🟢 LIVE" if 9 <= now_h < 15.5 else "⚫ CLOSED"
+    market_open, market_reason = _is_market_open()
+    session_icon = "🟢 LIVE" if market_open else f"⚫ {market_reason.upper()}"
 
     cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = _categorize(results, regime=regime)
 
@@ -463,6 +486,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     conv_tag = f"📋 {conversation_label} | " if conversation_label else ""
     out = f"{conv_tag}🗓️ {today}\n"
     out += f"📊 Regime: {regime_icon}{regime}{breadth} | NIFTY50:{len(results)} {session_icon}\n"
+    if not market_open:
+        out += f"\n⚠️  POST-MARKET — signals shown for reference only. Not for live trading.\n"
     c2_total = long_c2 + short_c2
     out += f"📦 NIFTY50: {len(results)} stocks | CatA📈{long_a}/📉{short_a} | CatA-📈{long_a_m}/📉{short_a_m} | CatB🤖{long_b}/📉{short_b} | CatC1📈{long_c1}/📉{short_c1} | CatC2📊{c2_total} | CatD📉 | WL📋{len(watchlist)}\n"
     # ── ML coverage + backtest freshness ───────────────────────────────
@@ -843,11 +868,13 @@ def main():
         IST = timezone(timedelta(hours=5, minutes=30))
         while True:
             now_ist = _dt.now(IST)
-            now_mins = now_ist.hour * 60 + now_ist.minute
-            target_mins = 9 * 60 + 40
-            if now_ist.hour >= 15:
-                print(f"Market closed ({now_ist.strftime('%I:%M %p IST')}), skipping wait.")
+            market_open, market_reason = _is_market_open()
+            if not market_open:
+                print(f"Market {market_reason} ({now_ist.strftime('%I:%M %p IST')}), skipping wait.")
                 break
+            now_ist = _dt.now(IST)
+            now_mins = now_ist.hour * 60 + now_ist.minute
+            target_mins = _MARKET_OPEN_MINS + 40   # 9:40 AM IST
             if now_mins >= target_mins:
                 print(f"Market open ({now_ist.strftime('%I:%M %p IST')}), starting scan.")
                 break

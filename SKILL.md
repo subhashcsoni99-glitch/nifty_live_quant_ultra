@@ -1,4 +1,4 @@
-# NIFTY Live Quant Ultra — SKILL.md v39
+# NIFTY Live Quant Ultra — SKILL.md v40
 
 > Multi-mode quant trading system. Paper trading only. No live money.
 > Backtest: v11 (3yr, Jun 2023–Jun 2026) | 46 stocks | Score based on validated metrics
@@ -21,10 +21,47 @@
 | v37 | 9.5/10 | P0-1/2, P1-1/2: RSI>65 block, poor_hist gap fixed, TOP_PICK ML check, DD cap |
 | v38 | 9.5/10 | P0-3/4/5, P1-3/4/5/6, P2-1/2/3 applied |
 | **v39** | **9.5/10** | BUG-2/3/4/5 fixed: rsi_mode in JSON, streaming scan, shared categorize, MIN_TRADES=50 |
+| **v40** | **9.5/10** | NEW-1/2/3: Market hours config, post-market warning, TTL=5min |
 
 ---
 
-## v39 — All Fixes Applied (2026-06-20)
+## v40 — All Fixes Applied (2026-06-20)
+
+### NEW-1 ✅ `_is_market_open()` — Post/Pre-Market Warning Banner
+**File:** `scan.py`
+
+**Problem:** Market-closed scans showed BUY/SELL signals with no context — user could act on stale signals.
+
+**Fix:** Added `_is_market_open()` helper with configurable hours (`MARKET_OPEN_HOUR/MIN`, `MARKET_CLOSE_HOUR/MIN`). `format_telegram()` now shows:
+```
+📊 Regime: 🔴BEARISH | NIFTY50:2 ⚫ POST-MARKET
+⚠️  POST-MARKET — signals shown for reference only. Not for live trading.
+```
+Also used in `--wait-morning` loop to skip waits when market is closed.
+
+---
+
+### NEW-2 ✅ Configurable Market Hours
+**File:** `scan.py`
+
+**Problem:** Hardcoded `15:00` close time — doesn't handle NSE early closes.
+
+**Fix:** Hours now configurable at top of file:
+```python
+MARKET_OPEN_HOUR,   MARKET_OPEN_MIN   = 9,  0
+MARKET_CLOSE_HOUR,  MARKET_CLOSE_MIN  = 15, 30   # NEW-2: configurable
+```
+
+---
+
+### NEW-3 ✅ Backtest Cache TTL: 3600s → 300s (5 min)
+**File:** `scan.py`
+
+**Problem:** `_STATS_TTL = 3600` (1hr) meant stale backtest data served if cache was warm.
+
+**Fix:** `_STATS_TTL = 300` — stats refreshed every 5 minutes max.
+
+---
 
 ### BUG-2 ✅ `rsi_mode` Saved to Backtest JSON
 **File:** `backtest.py`

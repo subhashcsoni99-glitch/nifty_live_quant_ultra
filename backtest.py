@@ -38,6 +38,7 @@ if '--rsi-mode' in _sys.argv:
             _RSI_MODE = mode
             print(f"RSI mode: {mode}")
 
+from nifty_categorize import categorize_results  # BUG-4: shared categorization
 from nifty_core import (
     DEFAULT_STOCKS, EXCLUDED_STOCKS,
     ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG, ADX_CONFIG, MOMENTUM_CONFIG,
@@ -480,6 +481,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             'level_mode': level_mode,
             'rsi_guards': True,
             'bearish_divergence': True,
+            'rsi_mode': _RSI_MODE,   # BUG-2: self-describing — proves strict vs relaxed
         },
         'trades_list': trades,
     }
@@ -609,6 +611,58 @@ def main():
     worst = min(active, key=lambda x: x['realized_return'])
     print(f"\n🏆 BEST:  {best['symbol']} Real.Ret={best['realized_return']:+.2f}% WR={best['win_rate']}%")
     print(f"💀 WORST: {worst['symbol']} Real.Ret={worst['realized_return']:+.2f}% WR={worst['win_rate']}%")
+
+    # BUG-4: Print categorization summary (uses SHARED logic from nifty_categorize.py)
+    # This matches the live scan's Cat A/B/C2/WL counts exactly
+    try:
+        # Build minimal result dicts for categorization (backtest has subset of fields)
+        cat_input = []
+        for res in active:
+            # Compute backtest metrics that _categorize expects
+            rr = res.get('realized_return', 0)
+            wr = res.get('win_rate', 0)
+            sig = 'BUY' if rr > 0 else ('SELL' if rr < 0 else 'RANGE')
+            r = {
+                'symbol': res['symbol'],
+                'signal': sig,
+                'rsi': 50,  # backtest doesn't track live RSI
+                'prob': 50,
+                'divergence': None,
+                'reasons': [],
+                'adx_trending': res.get('adx_regime', {}).get('avg_entry_adx', 20) > 20,
+                'price': 100,  # dummy — level alignment needs real price
+                't1': 110,
+                '_stats': {
+                    'win_rate': wr,
+                    'realized_return': rr,
+                },
+                '_level_align': 'ALIGNED',
+                'signal_age_days': 0,
+                'ai': {'outlook': 'NEUTRAL', 'confidence': 'LOW', 'total_score': 0,
+                       'stages': {'3_stock_scanner': {}, '6_risk_manager': {}}},
+                'ml': None,
+                'tags': [],
+            }
+            cat_input.append(r)
+
+        mkt = get_market_regime()
+        regime = mkt['regime']
+        cat_a, cat_a_m, cat_b, cat_c1, cat_c2, cat_d, wl = categorize_results(cat_input, regime=regime)
+        print(f"\n📊 LIVE-SCAN CATEGORIZATION (shared logic, {regime} regime):")
+        print(f"   Cat A:   {len(cat_a)} ({[r['symbol'] for r in cat_a]})")
+        print(f"   Cat A-:  {len(cat_a_m)} ({[r['symbol'] for r in cat_a_m]})")
+        print(f"   Cat B:   {len(cat_b)} ({[r['symbol'] for r in cat_b]})")
+        print(f"   Cat C1:  {len(cat_c1)} ({[r['symbol'] for r in cat_c1]})")
+        print(f"   Cat C2:  {len(cat_c2)} ({[r['symbol'] for r in cat_c2]})")
+        print(f"   WL:      {len(wl)}")
+        # Show mismatch between backtest qualified and live scan categories
+        bmk_symbols = set(r['symbol'] for r in qualified)
+        live_cat_a_symbols = set(r['symbol'] for r in cat_a + cat_a_m + cat_b)
+        in_bmk_not_live = bmk_symbols - live_cat_a_symbols
+        if in_bmk_not_live:
+            print(f"\n⚠️  BACKTEST-ONLY QUALIFIED (not in live Cat A/B): {sorted(in_bmk_not_live)}")
+    except Exception as e:
+        print(f"\n⚠️  Categorization summary unavailable: {e}")
 
     # Always save; --json controls whether JSON is also printed to stdout
     out = f"models/backtest_v11_{now.strftime('%Y%m%d_%H%M%S')}.json"

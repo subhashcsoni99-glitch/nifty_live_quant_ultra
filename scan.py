@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+from nifty_categorize import categorize_results as _categorize, get_primary_trigger
 from nifty_core import (
     NIFTY50_STOCKS, NIFTY100_STOCKS,
     EXCLUDED_STOCKS, GOOD_STOCKS, SCANNABLE_STOCKS, DEFAULT_STOCKS,
@@ -191,413 +192,6 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 # ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
 # Override with --no-adx flag to disable
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
-
-def _is_neg_hist(stats):
-    """NEG_HIST: rr < -2% AND wr < 40% — poor return OR weak win rate together"""
-    rr = stats.get('realized_return', 0)
-    wr = stats.get('win_rate', 0)
-    return rr < _NEG_HIST_RR_THRESHOLD and wr < _NEG_HIST_WR_THRESHOLD
-
-
-def _is_poor_history(stats):
-    """POOR_HIST: rr < -2% OR wr < 45% — Cat A WR gate (v36+ fix)
-    Gap was wr<25 leaving 25-45% stocks flooding Cat A. Now aligned with _MIN_WR_CAT_A=45."""
-    rr = stats.get('realized_return', 0)
-    wr = stats.get('win_rate', 0)
-    return rr < -2.0 or wr < 45
-
-
-def _wr_badge(wr):
-    """Return WR color badge: 🟢 >50%, 🟡 40-50%, 🔴 <40%"""
-    if wr >= 50:
-        return '🟢'
-    elif wr >= _LOW_WR_WARNING:
-        return '🟡'
-    else:
-        return '🔴'
-
-
-def _pos_size_warning(pos_pct):
-    """Return position sizing warning if > 5% of capital"""
-    if pos_pct > _POS_SIZE_WARNING_PCT:
-        return f'⚠️ OVERSIZE({pos_pct:.0f}%)'
-    return None
-
-
-# ─── Regime-Signal Coherence ──────────────────────────────────────────────────
-def _regime_coherence(signal, divergence, regime):
-    """Compute regime fit for a signal.
-    Returns: score 0.0-1.0, label string, is_contrarian bool
-    
-    BULL regime:  BUY + no divergence = coherent (1.0)
-                  BUY + BEAR_DIV = contrarian (0.0) → labeled 🔴 CONTRARIAN
-                  SELL = hedge (0.6)
-    BEAR regime: SELL + no divergence = coherent (1.0)
-                 SELL + BULL_DIV = contrarian (0.0) → labeled 🔴 CONTRARIAN
-                 BUY = hedge (0.6)
-    RANGE regime: any trending signal = low fit (0.3)
-    """
-    if regime == 'BULLISH':
-        if signal == 'BUY' and divergence != 'BEARISH':
-            return 1.0, 'ALIGNED', False
-        elif signal == 'BUY' and divergence == 'BEARISH':
-            return 0.0, '🔴 CONTRARIAN', True
-        elif signal == 'SELL':
-            return 0.6, 'HEDGE', False
-    elif regime == 'BEARISH':
-        if signal == 'SELL' and divergence != 'BULLISH':
-            return 1.0, 'ALIGNED', False
-        elif signal == 'SELL' and divergence == 'BULLISH':
-            return 0.0, '🔴 CONTRARIAN', True
-        elif signal == 'BUY':
-            return 0.6, 'HEDGE', False
-    else:  # RANGE
-        return 0.3, 'RANGE_BOUND', False
-    return 0.5, 'NEUTRAL', False
-
-
-def _stale_tier(age_days):
-    """Return stale tier label and confluence penalty multiplier.
-    Fresh: < 4 days → no penalty
-    Stale: 4-7 days → 10% penalty, tag ⏰ STALE
-    Critical: 8+ days → 30% penalty, tag 💀 STALE_CRITICAL
-    """
-    if age_days < 4:
-        return 'FRESH', 0.0
-    elif age_days < 8:
-        return 'STALE', 0.10
-    else:
-        return 'CRITICAL', 0.30
-
-
-# ─── Confluence Scoring v18 (tiered stale + regime fit + NEG_HIST grace) ──────
-def calc_confluence_score(r, regime='BULLISH'):
-    """Calculate 1-10 confluence score for a stock.
-    v18 components: Signal_Conf×0.20 + AI_Conf×0.25 + WR×0.20 + Level_Align×0.10 + Age×0.10 + RegimeFit×0.15
-    NEG_HIST grace: rr >= -2% passes, only rr < -2% triggers 30% penalty.
-    """
-    sig_conf = r.get('prob', 50) / 100.0  # 0-1
-    ai = r.get('ai') or {}
-    ml = r.get('ml') or {}
-    ai_score = ai.get('total_score', 0)  # -100 to 100 → normalize to 0-1
-    ai_conf = (ai_score + 100) / 200.0   # 0-1
-    sig = r['signal']
-    ai_dir = ai.get('outlook', 'NEUTRAL')
-    if sig == 'BUY' and ai_dir == 'BULLISH': ai_dir_score = 1.0
-    elif sig == 'SELL' and ai_dir == 'BEARISH': ai_dir_score = 1.0
-    elif sig == 'BUY' and ai_dir == 'BEARISH': ai_dir_score = 0.0
-    elif sig == 'SELL' and ai_dir == 'BULLISH': ai_dir_score = 0.0
-    else: ai_dir_score = 0.5
-    ai_final = ai_conf * 0.5 + ai_dir_score * 0.5
-    stats = r.get('_stats', {})
-    wr = stats.get('win_rate', 0) / 100.0  # 0-1
-    align = r.get('_level_align', 'ALIGNED')
-    align_score = 1.0 if align == 'ALIGNED' else (0.5 if align == 'WARN' else 0.0)
-    # Age tiered penalty
-    age_days = r.get('signal_age_days', 0)
-    age_tier, age_penalty = _stale_tier(age_days)
-    age_score = max(0, 1.0 - age_penalty)  # 1.0 for fresh, 0.9 for stale, 0.7 for critical
-    # Regime fit bonus
-    div = r.get('divergence')
-    _, regime_label, is_contrarian = _regime_coherence(sig, div, regime)
-    regime_score = 1.0 if not is_contrarian else 0.3  # contrarian gets big penalty here
-    score = (sig_conf * 0.20 + ai_final * 0.25 + wr * 0.20
-             + align_score * 0.10 + age_score * 0.10 + regime_score * 0.15)
-    # NEG_HIST penalty only for rr < -2% (mild negatives pass)
-    neg_hist = stats.get('realized_return', 0) < _NEG_HIST_RR_THRESHOLD
-    if neg_hist:
-        score *= 0.7  # 30% penalty for truly bad history
-    return round(score * 10, 1), age_tier, regime_label  # v18 returns tuple
-
-# ─── Categorization (v17: quality filters + Cat A- + WATCHLIST + stale flag) ──
-def _categorize(results, regime='BULLISH'):
-    """Categorize results into Cat A/A-/B/C1/C2/D/WATCHLIST.
-
-    Cat A:   Triple confirmed (Signal + AI_BULL + ML_UP) + poor/good history (rr >= -2%, wr >= 25%)
-    Cat A-:  2-of-3 confirmed + profitable but level mismatch
-    Cat B:   AI HIGH/MEDIUM conviction, no ML UP + rr >= -2% + wr >= 35% + no severe NEG_HIST
-    Cat C1:  Signal + AI agree (outlook matches signal direction), not Cat A/A-
-    Cat C2:  Signal only, AI neutral, or NEG_HIST / BEAR_DIV in BULL regime
-    Cat D:   ML signal only (ml_up for BUY or ml_down for SELL), AI neutral
-    WATCHLIST: RANGE-bound stocks
-
-    Quality gates (v25 UPGRADE for 9.5/10):
-    - WR badge: 🟢 >50%, 🟡 40-50%, 🔴 <40%
-    - LOW_WINRATE tag: ⚠️ LOW_WINRATE for WR < 40%
-    - Cat A: triple confirmed + wr >= 45% (raised from 25%)
-    - Cat B: wr >= 40% + rr >= -2% (raised from 35%)
-    - TOP_PICK: RR > 0 + CF >= 8.0 + WR >= 45% (new WR gate)
-    - Cat D excluded from TOP_PICKS
-    - Backtest stale warning: > 3 days old
-    - Position sizing warning: > 5% of capital
-    """
-    cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = [], [], [], [], [], [], []
-    for r in results:
-        ai = r.get('ai') or {}
-        ml = r.get('ml') or {}
-        ai_dir = ai.get('outlook', 'NEUTRAL')
-        ai_conf = ai.get('confidence', 'LOW')
-        ai_t1 = ai.get('stages', {}).get('6_risk_manager', {}).get('t1')
-        ml_dir = (ml.get('direction', None) if ml else None)
-        ml_fail = ml.get('_ml_fail_reason') if ml else None
-        div = r.get('divergence')
-        sig = r['signal']
-        stats = r.get('_stats', {})
-        r['_stats'] = stats
-        rr = stats.get('realized_return', 0)
-        wr = stats.get('win_rate', 0)
-        no_history = (wr == 0 and rr == 0)
-        neg_hist_severe = _is_neg_hist(stats) or rr < -5.0
-        poor_hist = _is_poor_history(stats)    # rr < -2% OR wr < 25%
-
-        # Level alignment check
-        sig_t1 = r.get('t1')
-        align_ok, gap_pct, align_status = True, 0.0, 'ALIGNED'
-        if sig in ('BUY', 'SELL') and ai_t1 and sig_t1 and sig_t1 > 0:
-            align_ok, gap_pct, align_status = check_level_alignment(ai_t1, sig_t1)
-        r['_level_align'] = align_status
-        r['_level_gap_pct'] = round(gap_pct, 2)
-
-        # Stale tiers
-        age_days = r.get('signal_age_days', 0)
-        age_tier, age_penalty = _stale_tier(age_days)
-        is_stale = age_tier in ('STALE', 'CRITICAL')
-
-        # Confluence score (v18: returns CF, age_tier, regime_label)
-        r['_confluence'], _, r['_regime_label'] = calc_confluence_score(r, regime)
-
-        def _tag_all(r_obj):
-            if neg_hist_severe: _add_tag(r_obj, '⚠️ NEG_HIST')
-            if age_tier == 'STALE': _add_tag(r_obj, '⏰ STALE')
-            if age_tier == 'CRITICAL': _add_tag(r_obj, '💀 STALE_CRITICAL')
-            if not align_ok: _add_tag(r_obj, f'⚠️ LVL_{align_status}')
-            if r_obj.get('_regime_label') == '🔴 CONTRARIAN':
-                _add_tag(r_obj, '🔴 CONTRARIAN')
-
-        if sig == 'RANGE':
-            _add_tag(r, '📋 RANGE')
-            if age_days > 1:
-                _add_tag(r, '⏰ STALE')
-            watchlist.append(r)
-            continue
-
-        if sig == 'BUY':
-            ml_up = ml_dir == 'UP'
-            ai_bull = ai_dir == 'BULLISH'
-            # v34: ADX quality check for Cat A
-            s3 = ai.get('stages', {}).get('3_stock_scanner', {})
-            adx_val = s3.get('adx', 0)
-            adx_trending = s3.get('adx_trending', None)
-            adx_ok = bool(adx_trending is True or (adx_trending is None and adx_val >= 25))
-
-            # v36 Fix #5: BEAR_DIV stocks with strong history bypass Cat C2 → Cat B
-            # Only block if: poor history OR no history OR AI not bullish
-            if div == 'BEARISH':
-                _, regime_lbl, is_contra = _regime_coherence(sig, div, regime)
-                if is_contra:
-                    _add_tag(r, 'BEAR_DIV')
-                    _add_tag(r, '🔴 CONTRARIAN')
-                else:
-                    _add_tag(r, 'BEAR_DIV')
-                # v38 P1-3: In BEARISH regime, BEAR_DIV + BUY = always Cat C2
-                # BEAR_DIV is a SHORT setup — BUY direction contradicts bear regime
-                # Even if AI=BULL, downgrade (short-term bounce fades in bear market)
-                if poor_hist or no_history:
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif sig == 'BUY':
-                    # ADANIENT: BEAR_DIV+BUY in bear → Cat C2 (not Cat B)
-                    _tag_all(r)
-                    cat_c2.append(r)
-                else:
-                    # Actual SHORT signal with good history → Cat C1
-                    _tag_all(r)
-                    cat_c1.append(r)
-            elif ai_bull and ml_up:
-                # Cat A: triple confirmed + not poor hist + ADX trending + RSI not overbought
-                # v36 P0-2: block RSI > buy_relaxed (overbought) from Cat A BUY
-                rsi = r.get('rsi', 0)
-                if rsi > RSI_CONFIG['buy_relaxed']:   # RSI > 65 = overbought
-                    _add_tag(r, '⚠️ OVERBOUGHT')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif not adx_ok:
-                    _add_tag(r, '⚠️ LOW_ADX')
-                    _tag_all(r)
-                    cat_a_minus.append(r)
-                elif no_history:
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif poor_hist:
-                    _add_tag(r, '⚠️ POOR_HIST')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                else:
-                    _tag_all(r)
-                    if not align_ok:
-                        _add_tag(r, 'UNCONFIRMED')
-                        cat_a_minus.append(r)
-                    else:
-                        cat_a.append(r)
-            elif ai_bull and (ai_conf in ('HIGH', 'MEDIUM') or ml is None):
-                # v37 P0-5: Check ML direction first — ML=DOWN = contradict
-                # v37 P1-6: WR≥50% bypasses ML check (exceptional momentum stocks)
-                ml_dir = (ml or {}).get('direction', '')
-                ml_contradicts = (ml_dir == 'DOWN')
-                if no_history:
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                # WR badge always shown
-                wr_badge = _wr_badge(wr)
-                if wr > 0 and wr < _LOW_WR_WARNING:
-                    _add_tag(r, f'⚠️ LOW_WINRATE({wr:.0f}%)')
-                if neg_hist_severe:
-                    _add_tag(r, '⚠️ NEG_HIST')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif no_history:
-                    # v38 P1-4: no_history bypasses WR gate → Cat C2 (unknown quality)
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif ml_contradicts and wr < 50:
-                    # v37 P0-5: ML=DOWN and WR not exceptional → Cat C2
-                    _add_tag(r, '⚠️ ML_CONTRADICT')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif wr > 0 and wr < _MIN_WR_CAT_B:
-                    _add_tag(r, f'⚠️ WR_LOW({wr:.0f}%)')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                else:
-                    # v37 P1-6: ML=DOWN but WR≥50% (exceptional momentum) → Cat B
-                    # OR: normal Bullish AI + good history → Cat B
-                    if ml_contradicts:
-                        _add_tag(r, '⚠️ ML_CONTRADICT')
-                    _tag_all(r)
-                    if not align_ok:
-                        _add_tag(r, 'UNCONFIRMED')
-                    cat_b.append(r)
-            elif ml_up:
-                # v38 fix: ML_UP + SELL signal → Cat C1 (explicit SHORT setup)
-                if sig == 'SELL':
-                    cat_c1.append(r)
-                elif ai_dir == 'NEUTRAL':
-                    cat_d.append(r)
-                else:
-                    _add_tag(r, 'AI_CONTRADICT')
-                    _tag_all(r)
-                    cat_c2.append(r)
-            elif ai_dir == 'NEUTRAL':
-                if no_history:
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                _tag_all(r)
-                cat_c2.append(r)
-            else:
-                _add_tag(r, 'AI_CONTRADICT')
-                _tag_all(r)
-                cat_c2.append(r)
-
-        elif sig == 'SELL':
-            ml_down = ml_dir == 'DOWN'
-            ai_bear = ai_dir == 'BEARISH'
-            ai_bull = ai_dir == 'BULLISH'
-            # Regime fit for shorts
-            _, rlabel, is_hedge = _regime_coherence(sig, div, regime)
-
-            if ml_down:
-                if ai_bull:
-                    _add_tag(r, 'AI_CONTRADICT')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif poor_hist:
-                    _add_tag(r, '⚠️ POOR_HIST')
-                    _tag_all(r)
-                    # v38 fix: SELL + poor_hist = explicit SHORT even with AI=NEUTRAL
-                    cat_c1.append(r)
-                else:
-                    _tag_all(r)
-                    if not align_ok:
-                        _add_tag(r, 'UNCONFIRMED')
-                        cat_a_minus.append(r)
-                    else:
-                        cat_a.append(r)  # Cat A SHORT: Signal+SELL+ML_DOWN+AI not bullish
-            elif ai_bear:
-                if no_history:
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                if neg_hist_severe:
-                    _add_tag(r, '⚠️ NEG_HIST')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif wr > 0 and wr < 35:
-                    _add_tag(r, f'⚠️ WR_LOW({wr:.0f}%)')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                else:
-                    _tag_all(r)
-                    if not align_ok:
-                        _add_tag(r, 'UNCONFIRMED')
-                    # v19: AI_BEARISH + SELL in BULL regime → Cat A-SHORT (HEDGE tier)
-                    if regime == 'BULLISH':
-                        _add_tag(r, '🛡️ HEDGE')
-                        cat_a_minus.append(r)  # A- is where we put hedge shorts
-                    else:
-                        cat_c1.append(r)
-            else:
-                if no_history:
-                    _add_tag(r, '⚠️ NO_BACKTEST')
-                _tag_all(r)
-                cat_c2.append(r)
-
-    # v25: Star Cat A/B stocks with positive RR + high CF + adequate WR as ⭐ TOP_PICK
-    # Exclude Cat D from TOP_PICKS entirely
-    # v36 P1-2: Exclude stocks with ML=DOWN (ML contradicts the signal)
-    for r in cat_a + cat_b:
-        stats = r.get('_stats', {})
-        rr = stats.get('realized_return', 0)
-        wr = stats.get('win_rate', 0)
-        cf = r.get('_confluence', 0)
-        ml = r.get('ml') or {}
-        ml_dir = ml.get('direction', '')
-        if ml_dir == 'DOWN':
-            continue   # v36 P1-2: skip — ML contradicts the signal (ICICIBANK case)
-        if rr > 0 and cf >= 8.0 and wr >= _MIN_WR_TOP_PICK:
-            r['_starred'] = True
-            _add_tag(r, '⭐ TOP_PICK')
-
-    return cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist
-
-def _add_tag(r, tag):
-    if 'tags' not in r:
-        r['tags'] = []
-    if tag not in r['tags']:
-        r['tags'].append(tag)
-def _get_primary_trigger(meta, rsi, divergence, signal):
-    """v38 P2-3: Label the primary reason for the signal."""
-    if signal == 'BUY':
-        if rsi < 30:
-            return 'MEAN_REVERSION'
-        reasons = meta.get('reasons', [])
-        for r in reasons:
-            if 'MA200' in r: return 'BREAKOUT'
-            if 'MA50'  in r: return 'BREAKOUT'
-            if 'MA20'  in r: return 'BREAKOUT'
-        if divergence == 'BULLISH': return 'DIVERGENCE_LONG'
-        if meta.get('adx_trending'): return 'TREND_FOLLOW'
-        return 'MEAN_REVERSION'
-    elif signal == 'SELL':
-        if rsi > 70:
-            return 'MOMENTUM'
-        if divergence == 'BEARISH': return 'DIVERGENCE_SHORT'
-        reasons = meta.get('reasons', [])
-        for r in reasons:
-            if 'MA200' in r: return 'BREAKDOWN'
-        if meta.get('adx_trending'): return 'TREND_FOLLOW'
-        return 'MOMENTUM'
-    return ''
-
-
-# ─── Level Mode Helpers ─────────────────────────────────────────────────────
 def get_level_modes_extended(price, atr):
     """Return all level sets for a stock."""
     return {
@@ -703,6 +297,7 @@ def parse_args():
     conversation_label = None   # passed to Telegram header
     debug_mode = False         # v22: print confluence component breakdown per stock
     wait_morning = False  # v35: sleep until 9:40 AM IST before scanning
+    stream_output = False  # BUG-3: per-stock output, no buffering
 
     args = sys.argv[1:]
     i = 0
@@ -795,6 +390,8 @@ def parse_args():
                 i += 1
         elif arg == '--wait-morning':
             wait_morning = True; i += 1
+        elif arg == '--stream':
+            stream_output = True; i += 1   # BUG-3: per-stock output, no buffering
         elif arg.startswith('--'):
             i += 1
         else:
@@ -803,7 +400,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, _MAX_POS_PCT_OVERRIDE
+    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, stream_output
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing'):
@@ -1232,7 +829,7 @@ def main():
     (stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter,
      output_format, level_mode, top_n, auto_retrain,
      filter_neg_hist, backtest_first, conversation_label, debug_mode,
-     wait_morning, max_pos_pct) = parse_args()
+     wait_morning, max_pos_pct, stream_output) = parse_args()
 
     # ── v35: --wait-morning — sleep until 9:40 AM IST before scanning ────
     if wait_morning:
@@ -1275,23 +872,57 @@ def main():
     sector_counts = {}
     results = []
 
-    for sym in stocks:
+    # BUG-3: ThreadPoolExecutor — parallel scan, no buffering
+    import concurrent.futures, sys as _sys
+    _done = 0
+    _total = len(stocks)
+
+    def _process_one(sym):
+        """Analyze one stock, return (sym, result_dict or None)."""
         r = analyze(sym, use_ai=use_ai, use_trailing=use_trailing,
                     fundamental_filter=fundamental_filter,
                     level_mode=level_mode, auto_retrain=auto_retrain,
                     momentum_mode=momentum_mode)
-        if r and r['price'] and r['price'] > 0:
-            if filter_neg_hist:
-                stats = r.get('_stats', {})
-                if stats.get('realized_return', 0) < 0:
-                    continue  # skip historically money-losing stocks
-            if sector_cap and r['signal'] in ('BUY', 'SELL'):
-                sector = get_sector(sym)
-                if check_sector_limit(sector, sector_counts, MAX_PER_SECTOR):
-                    r['_sector_skipped'] = sector
-                else:
-                    sector_counts[sector] = sector_counts.get(sector, 0) + 1
-            results.append(r)
+        return sym, r
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as _executor:
+        _futures = {_executor.submit(_process_one, sym): sym for sym in stocks}
+        for _fut in concurrent.futures.as_completed(_futures):
+            _sym, r = _fut.result()
+            _done += 1
+            if r and r.get('price') and r.get('price') > 0:
+                if filter_neg_hist:
+                    stats = r.get('_stats', {})
+                    if stats.get('realized_return', 0) < 0:
+                        _futures[_fut]  # consumed
+                        if stream_output:
+                            print(f"\r  [SKIP-] {_sym}: negative history", end='', flush=True)
+                        continue
+                if sector_cap and r['signal'] in ('BUY', 'SELL'):
+                    sector = get_sector(_sym)
+                    if check_sector_limit(sector, sector_counts, MAX_PER_SECTOR):
+                        r['_sector_skipped'] = sector
+                    else:
+                        sector_counts[sector] = sector_counts.get(sector, 0) + 1
+                results.append(r)
+                if stream_output:
+                    sig = r['signal']
+                    rsi = r.get('rsi', 0)
+                    cf = r.get('_confluence', 0)
+                    tags = r.get('tags', [])
+                    icon = '📈' if sig == 'BUY' else ('📉' if sig == 'SELL' else '📋')
+                    tag_str = ' '.join([t for t in tags if '⚠️' in t or 'TOP_PICK' in t or '⭐' in t])
+                    print(f"\r  {icon} {_sym}: ₹{r['price']:.0f} {sig} RSI:{rsi:.0f} CF:{cf:.1f}/10 {tag_str}", end='', flush=True)
+            else:
+                if stream_output:
+                    print(f"\r  [SKIP ] {_sym}: no data", end='', flush=True)
+            # Progress indicator every 5 stocks
+            if _done % 5 == 0 or _done == _total:
+                print(f"\r  Scanned {_done}/{_total} stocks...", end='', flush=True)
+                _sys.stdout.flush()
+
+    if stream_output:
+        print(f"\r  Scan complete — {len(results)} results.{" "*10}", flush=True)
 
     if fundamental_filter:
         results = filter_by_fundamentals(results)

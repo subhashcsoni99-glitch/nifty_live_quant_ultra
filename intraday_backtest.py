@@ -36,7 +36,7 @@ RSI_PERIOD = 14
 SL_MULT = 1.0   # 1× hourly ATR — tight stop
 T1_MULT = 2.0   # 2× hourly ATR — primary target (2:1 RR)
 T2_MULT = 4.0   # 4× hourly ATR — big move target (4:1 RR)
-MIN_TRADES = 5   # minimum trades for qualification
+MIN_TRADES = 50  # BUG-5: was 5 — too low for statistical validity; ~1 trade/week × 50 weeks = 50
 
 # ─── Helpers ───────────────────────────────────────────────────────────────
 def calc_ema(series, period):

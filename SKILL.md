@@ -1,4 +1,4 @@
-# NIFTY Live Quant Ultra — SKILL.md v38
+# NIFTY Live Quant Ultra — SKILL.md v39
 
 > Multi-mode quant trading system. Paper trading only. No live money.
 > Backtest: v11 (3yr, Jun 2023–Jun 2026) | 46 stocks | Score based on validated metrics
@@ -19,11 +19,58 @@
 | v35 | 9.5/10 | Fixes 1–9: per_hr wired, 3yr backtest, zone targets, ADX default ON |
 | v36 | 9.5/10 | P0-A/B/C/D/E: ADX 20, RSI<30, RSI>70 short, 52w low, WR gate 45% |
 | v37 | 9.5/10 | P0-1/2, P1-1/2: RSI>65 block, poor_hist gap fixed, TOP_PICK ML check, DD cap |
-| **v38** | **9.5/10** | P0-3/4/5, P1-3/4/5/6, P2-1/2/3 applied |
+| v38 | 9.5/10 | P0-3/4/5, P1-3/4/5/6, P2-1/2/3 applied |
+| **v39** | **9.5/10** | BUG-2/3/4/5 fixed: rsi_mode in JSON, streaming scan, shared categorize, MIN_TRADES=50 |
 
 ---
 
-## v38 — All Fixes Applied (2026-06-20)
+## v39 — All Fixes Applied (2026-06-20)
+
+### BUG-2 ✅ `rsi_mode` Saved to Backtest JSON
+**File:** `backtest.py`
+
+**Problem:** `rsi_mode` (strict/relaxed) was a CLI flag but never saved to the backtest JSON output, making it impossible to verify which mode produced the results.
+
+**Fix:** Added `'rsi_mode': _RSI_MODE` to the backtest result dict:
+```python
+'rsi_mode': _RSI_MODE,   # self-describing — proves strict vs relaxed
+```
+
+---
+
+### BUG-3 ✅ Streaming Scan Output (No More 4-Min Blackout)
+**File:** `scan.py`
+
+**Problem:** Sequential loop of 49 stocks × ~5s each = 4+ minutes of no output. Appeared frozen.
+
+**Fix:** Replaced sequential loop with `ThreadPoolExecutor(max_workers=8)` — parallel stock analysis + per-stock progress output + `--stream` flag for live output:
+```bash
+python3 scan.py --ai --stream   # live per-stock output as it completes
+```
+
+Added `stream_output` parameter to `parse_args()` + `main()`.
+
+---
+
+### BUG-4 ✅ Shared Categorization Module (`nifty_categorize.py`)
+**Files:** `nifty_categorize.py` (new) + `scan.py` + `backtest.py`
+
+**Problem:** `scan.py` and `backtest.py` each had their own copy of `_categorize()`. ADANIENT was Cat C2 in live scan but qualified in backtest — inconsistent logic.
+
+**Fix:** Extracted all categorization logic into `nifty_categorize.py` — single source of truth, imported by both `scan.py` and `backtest.py`. Backtest now prints live-scan-style Cat A/A-/B/C1/C2/WL counts after the summary, plus shows any mismatch between backtest qualified and live categories.
+
+---
+
+### BUG-5 ✅ Intraday `MIN_TRADES`: 5 → 50
+**File:** `intraday_backtest.py`
+
+**Problem:** `MIN_TRADES = 5` meant only 5 trades qualified a stock — statistically meaningless.
+
+**Fix:** `MIN_TRADES = 50` (~1 trade/week × 50 weeks). Proportional to `--days` argument: `max(5, days // 5)`.
+
+---
+
+### v38 Fixes (Still Active)
 
 ### P0-3 ✅ SHREECEM DD=100% No DD Gate
 **File:** `backtest.py`

@@ -731,7 +731,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     # v38 P0-5: Cat C2 compact format (not full trade cards)
     if cat_c2:
         sorted_c2 = sorted(cat_c2, key=lambda x: -x.get('prob', 0))
-        out += f"📊 Cat C2 — SIGNAL ONLY [{len(sorted_c2)}]\n"
+        out += f"📊 Cat C2 — UNCONFIRMED [{len(sorted_c2)}]\n"
         for r in sorted_c2[:20]:
             stats = r.get('_stats', {})
             tags = r.get('tags', [])
@@ -746,8 +746,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             out += f"  ... +{len(sorted_c2)-20} more\n"
         out += "\n"
     else:
-        out += "📊 Cat C2 — SIGNAL ONLY [0]: —\n\n\n"
-    out += safe_fmt_cat("🧠 Cat D — ML SIGNAL ONLY", cat_d)
+        out += "📊 Cat C2 — UNCONFIRMED [0]: —\n\n\n"
+    out += safe_fmt_cat("🧠 Cat D — ML_CONFLICT SHORT", cat_d)
 
     # v38 P1-5: Filter WL — RSI 30-42 (buy zone) or RSI 58-70 (sell zone)
     def _wl_filter(r):

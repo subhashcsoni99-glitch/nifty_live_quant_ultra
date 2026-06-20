@@ -198,10 +198,10 @@ def _categorize(results, regime='BULLISH'):
     Cat A:   Triple confirmed (Signal + AI_BULL + ML_UP) + wr >= 45% + not poor_hist
     Cat A-:  2-of-3 confirmed + profitable but level mismatch
     Cat B:   AI HIGH/MEDIUM + wr >= 35% + rr >= -2% + no severe NEG_HIST
-    Cat C1:  Signal + AI agree (same direction) + not Cat A/A-
-    Cat C2:  Signal only, AI neutral, NEG_HIST, or BEAR_DIV in BULL regime
-    Cat D:   ML signal only + AI neutral
-    WATCHLIST: RANGE-bound stocks
+    Cat C1:  RSI>70 SHORT (independent momentum) + AI/ML-agreeing SHORTs
+    Cat C2:  UNCONFIRMED — AI neutral, NEG_HIST, WR<threshold, level mismatch
+    Cat D:   ML_CONFLICT SHORT (ML=DOWN + AI=BULLISH) — ML predicts down, AI says up
+    WATCHLIST: RANGE-bound or BEAR_DIV+BUY (contradictory) stocks
     """
     cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = [], [], [], [], [], [], []
     for r in results:
@@ -263,24 +263,13 @@ def _categorize(results, regime='BULLISH'):
             adx_trending = s3.get('adx_trending', None)
             adx_ok = bool(adx_trending is True or (adx_trending is None and adx_val >= 25))
 
-            # BEAR_DIV path: SHORT setup — promote/degrade based on regime
-            if div == 'BEARISH':
-                _, regime_lbl, is_contra = _regime_coherence(sig, div, regime)
-                if is_contra:
-                    _add_tag(r, 'BEAR_DIV')
-                    _add_tag(r, '🔴 CONTRARIAN')
-                else:
-                    _add_tag(r, 'BEAR_DIV')
-                # v38 P1-3: In BEARISH regime, BEAR_DIV + BUY = always Cat C2
-                if poor_hist or no_history:
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif sig == 'BUY':
-                    _tag_all(r)
-                    cat_c2.append(r)
-                else:
-                    _tag_all(r)
-                    cat_c1.append(r)
+            # C5 fix: BEAR_DIV + BUY is a contradictory signal — route to RANGE
+            if div == 'BEARISH' and sig == 'BUY':
+                _add_tag(r, 'BEAR_DIV')
+                _add_tag(r, '⚠️ CONTRADICTORY')
+                _tag_all(r)
+                watchlist.append(r)
+                continue
 
             elif ai_bull and ml_up:
                 # Cat A: triple confirmed
@@ -366,15 +355,28 @@ def _categorize(results, regime='BULLISH'):
             ml_down = ml_dir == 'DOWN'
             ai_bear = ai_dir == 'BEARISH'
 
-            if ml_down:
-                if ai_dir == 'BULLISH':
-                    _add_tag(r, 'AI_CONTRADICT')
-                    _tag_all(r)
-                    cat_c2.append(r)
-                elif poor_hist:
+            # ── C1/C2/C3: RSI>70 SHORT — independent momentum (no AI/ML filter needed) ──
+            # RSI>70 SHORTs fire at source (nifty_core.py P0-4) as direct SELL signals.
+            # They bypass all AI/ML checks. Route directly to Cat C1 for TOP_SHORT visibility.
+            rsi = r.get('rsi', 0)
+            if rsi > 70:
+                _add_tag(r, '🎯 RSI_SHORT')
+                _tag_all(r)
+                cat_c1.append(r)
+
+            # ── AI_CONFLICT: ML=DOWN + AI=BULLISH — ML predicts down, AI says up ──
+            # C3 fix: This is ML_CONFLICT, not AI_CONTRADICT. Route to Cat D.
+            elif ml_down and ai_dir == 'BULLISH':
+                _add_tag(r, '⚠️ ML_CONFLICT')
+                _tag_all(r)
+                cat_d.append(r)
+
+            # ── ML=DOWN + AI=BEARISH — aligned bearish (Cat A SHORT) ──
+            elif ml_down and ai_bear:
+                if poor_hist:
                     _add_tag(r, '⚠️ POOR_HIST')
                     _tag_all(r)
-                    cat_c1.append(r)
+                    cat_c2.append(r)
                 else:
                     _tag_all(r)
                     if not align_ok:
@@ -383,6 +385,24 @@ def _categorize(results, regime='BULLISH'):
                     else:
                         cat_a.append(r)
 
+            # ── ML=DOWN + AI=NEUTRAL — ML-driven SHORT ──
+            elif ml_down and ai_dir == 'NEUTRAL':
+                _tag_all(r)
+                cat_c1.append(r)
+
+            # ── BEAR_DIV SHORT + AI=BEARISH — divergence confirmed ──
+            elif ai_bear and div == 'BEARISH':
+                if no_history:
+                    _add_tag(r, '⚠️ NO_BACKTEST')
+                if neg_hist_severe:
+                    _add_tag(r, '⚠️ NEG_HIST')
+                    _tag_all(r)
+                    cat_c2.append(r)
+                else:
+                    _tag_all(r)
+                    cat_c1.append(r)
+
+            # ── AI=BEARISH only — no ML or divergence confirmation ──
             elif ai_bear:
                 if no_history:
                     _add_tag(r, '⚠️ NO_BACKTEST')
@@ -396,19 +416,37 @@ def _categorize(results, regime='BULLISH'):
                     cat_c2.append(r)
                 else:
                     _tag_all(r)
-                    if not align_ok:
-                        _add_tag(r, 'UNCONFIRMED')
                     if regime == 'BULLISH':
                         _add_tag(r, '🛡️ HEDGE')
                         cat_a_minus.append(r)
                     else:
                         cat_c1.append(r)
 
+            # ── AI=NEUTRAL — no conviction SHORT ──
             else:
                 if no_history:
                     _add_tag(r, '⚠️ NO_BACKTEST')
                 _tag_all(r)
                 cat_c2.append(r)
+
+    # ── TOP_SHORT selection (C1 fix) — now reads Cat C1 too ──
+    for r in cat_a + cat_a_minus + cat_b + cat_c1:
+        stats = r.get('_stats', {})
+        rr = stats.get('realized_return', 0)
+        wr = stats.get('win_rate', 0)
+        cf = r.get('_confluence', 0)
+        ml = r.get('ml') or {}
+        ml_dir = ml.get('direction', '')
+        rsi = r.get('rsi', 0)
+        is_short = r['signal'] == 'SELL'
+        if ml_dir == 'UP':
+            continue   # skip — ML contradicts SHORT
+        if not is_short:
+            continue   # TOP_SHORT only for SELL signals
+        # TOP_SHORT criteria: positive RR + high CF + adequate WR + trending
+        if rr > 0 and cf >= 7.0 and wr >= 38:
+            r['_starred'] = True
+            _add_tag(r, '🔻 TOP_SHORT')
 
     # TOP_PICK selection
     for r in cat_a + cat_b:

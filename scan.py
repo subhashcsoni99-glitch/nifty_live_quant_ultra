@@ -43,6 +43,7 @@ from nifty_categorize import (
     get_primary_trigger as _get_primary_trigger,
     _wr_badge, _stale_tier, _is_neg_hist, _is_poor_history,
     _regime_coherence, calc_confluence_score, _add_tag,
+    _pos_size_warning,
 )
 from nifty_core import (
     NIFTY50_STOCKS, NIFTY100_STOCKS,

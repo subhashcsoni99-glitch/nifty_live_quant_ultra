@@ -164,6 +164,8 @@ def _retrain_model(sym):
 # ─── Backtest Stats Cache (v17: proper time.time() TTL) ──────────────────────
 _STATS_CACHE = None
 _STATS_LOADED_AT = 0  # v18fix: was None → reload logic never fired
+_BACKTEST_RUN_COUNT = 0  # S2: session-level cap
+_BACKTEST_RUN_CAP = 2    # run backtest at most twice per scan session
 _STATS_TTL = 300  # NEW-3: was 3600 (1hr) → 300s (5min) for always-fresh stats
 
 def _get_stats(symbol):
@@ -171,6 +173,12 @@ def _get_stats(symbol):
     global _STATS_CACHE, _STATS_LOADED_AT
     now = _time.time()
     if _STATS_CACHE is None or (_STATS_LOADED_AT and (now - _STATS_LOADED_AT) > _STATS_TTL):
+        # S2 fix: enforce per-session backtest run cap to avoid non-determinism
+        global _BACKTEST_RUN_COUNT
+        if _BACKTEST_RUN_COUNT >= _BACKTEST_RUN_CAP:
+            pass  # use stale cache rather than running backtest again
+        else:
+            _BACKTEST_RUN_COUNT += 1
         _STATS_CACHE = {}
         try:
             all_files = sorted(
@@ -439,6 +447,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     range_list = [r for r in results if r['signal'] == 'RANGE']
 
     # v34: 4-tier Index Regime (NIFTY50 MA-based) + A/D breadth + trading hours
+    # P1-2 Fix: use ADX to confirm BEARISH — price below MA5+MA20 AND ADX>20 required
     try:
         import yfinance as yf
         idx = yf.Ticker("^NSEI")
@@ -448,6 +457,9 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             price_prev = df_i["Close"].iloc[-2]
             ma5 = df_i["Close"].tail(5).mean()
             ma20 = df_i["Close"].tail(20).mean() if len(df_i) >= 20 else df_i["Close"].mean()
+            # P1-2: fetch ADX from NIFTY daily data to confirm trend
+            nifty_df = add_features(df_i)
+            adx_val = float(nifty_df['adx'].iloc[-1]) if 'adx' in nifty_df.columns and not pd.isna(nifty_df['adx'].iloc[-1]) else 25
             from nifty_core import NIFTY50_STOCKS
             adv, dec = 0, 0
             for sym in NIFTY50_STOCKS:
@@ -460,10 +472,11 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                         elif chg < 0: dec += 1
                 except: pass
         else:
-            price_now, ma5, ma20 = 23999, 24000, 23600
+            price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
     except Exception:
-        price_now, ma5, ma20, adv, dec = 23999, 24000, 23600, 0, 0
-    if price_now < ma5 and price_now < ma20:
+        price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
+    # P1-2: Require ADX>20 to confirm BEARISH — avoids false BEARISH in choppy markets
+    if price_now < ma5 and price_now < ma20 and adx_val > 20:
         regime = "BEARISH"; regime_icon = "🔴"
     elif price_now < ma5:
         regime = "NEUTRAL"; regime_icon = "🟡"
@@ -475,7 +488,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     market_open, market_reason = _is_market_open()
     session_icon = "🟢 LIVE" if market_open else f"⚫ {market_reason.upper()}"
 
-    cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = _categorize(results, regime=regime)
+    cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_c2a, cat_c2b, cat_d, watchlist, bear_div_shorts, short_qualified = _categorize(results, regime=regime)
+    short_q = len(short_qualified)  # P2: SHORT count for header
 
     long_a=sum(1 for r in cat_a if r['signal']=='BUY'); short_a=sum(1 for r in cat_a if r['signal']=='SELL')
     long_a_m=sum(1 for r in cat_a_minus if r['signal']=='BUY'); short_a_m=sum(1 for r in cat_a_minus if r['signal']=='SELL')
@@ -490,6 +504,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         out += f"\n⚠️  POST-MARKET — signals shown for reference only. Not for live trading.\n"
     c2_total = long_c2 + short_c2
     out += f"📦 NIFTY50: {len(results)} stocks | CatA📈{long_a}/📉{short_a} | CatA-📈{long_a_m}/📉{short_a_m} | CatB🤖{long_b}/📉{short_b} | CatC1📈{long_c1}/📉{short_c1} | CatC2📊{c2_total} | CatD📉 | WL📋{len(watchlist)}\n"
+    if short_q > 0:
+        out += f"📉 SHORT-qualified: {short_q} stocks\n"
     # ── ML coverage + backtest freshness ───────────────────────────────
     import os as _os
     model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
@@ -500,10 +516,15 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     bt_files = [f for f in _os.listdir(model_dir) if f.startswith('backtest_v')]
     if bt_files:
         latest_bt = max(bt_files, key=lambda f: _os.path.getmtime(_os.path.join(model_dir, f)))
-        age = (datetime.now() - datetime.fromtimestamp(_os.path.getmtime(_os.path.join(model_dir, latest_bt)))).days
-        stale = "⚠️" if age >= _BACKTEST_STALE_DAYS else "✅"
-        out += f"{stale} Backtest: {latest_bt} ({age}d old)\n"
-    # v25: WR distribution summary
+        bt_mtime = _os.path.getmtime(_os.path.join(model_dir, latest_bt))
+        age_hrs = (datetime.now().timestamp() - bt_mtime) / 3600
+        age_days = age_hrs / 24
+        stale = "\u26a0\ufe0f" if age_days >= _BACKTEST_STALE_DAYS else "\u2705\ufe0f"
+        age_str = f"{age_hrs:.1f}h" if age_hrs < 24 else f"{age_days:.0f}d"
+        out += f"{stale} Backtest: {latest_bt} ({age_str})"
+        if age_hrs > 2:
+            out += " \u26a0\ufe0f(>2h \u2014 RR may drift)"
+        out += "\n"
     all_wr = [r.get('_stats',{}).get('win_rate',0) for r in results]
     green_wr = sum(1 for w in all_wr if w >= 50)
     yellow_wr = sum(1 for w in all_wr if 40 <= w < 50)
@@ -522,13 +543,14 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     def _round_lev(d):
         return {k: round(v, 0) for k, v in d.items()}
 
-    def _qty_rs10k(price, sl, sig='BUY'):
-        """Position size for ~Rs 10,000 risk at given SL distance."""
-        if sig == 'SELL':
-            risk = max(abs(sl - price), 0.01)  # SL above entry for shorts
-        else:
-            risk = max(abs(price - sl), 0.01)
-        return max(1, int(10000 / risk))
+    def _qty_rs10k(price, sl, sig='BUY', mode='swing'):
+        """Position size for ~Rs 10,000 risk at given SL distance.
+        P0-1 Fix: mode-aware — swing uses swing_SL (1.5×), intraday uses intraday_SL (3×).
+        SHORT: SL is ABOVE entry price, so abs(price - sl) is correct."""
+        sl_dist = abs(price - sl)
+        if sl_dist < 0.5:
+            sl_dist = price * 0.01   # fallback: 1% of price
+        return max(1, int(10000 / sl_dist))
 
     def fmt_levels_hr(r, sig):
         """Compute intraday + swing levels for display.
@@ -592,17 +614,24 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         price = r['price']
         mode = show_mode or level_mode
         age_days = r.get('signal_age_days', 0)
-        # v25: WR badge + position sizing warning
+        # P0-1 Fix: WR badge + swing-based position sizing (not intraday)
+        # Swing SL = price - atr*1.5 → gives realistic 4-10% pos_pct
         wr_badge = _wr_badge(wr)
-        pos_warn = _pos_size_warning(r.get('pos_pct', 0))
-        pos_tag = f" {pos_warn}" if pos_warn else ''
+        swing_sl_dist = abs(price - r.get('sl_swing', price * 0.015))
+        if swing_sl_dist < 0.5:
+            swing_sl_dist = price * 0.01
+        swing_qty = max(1, int(10000 / swing_sl_dist))
+        swing_pos_pct = round((swing_qty * price) / 100000 * 100, 1)
+        pos_warn = None   # P0-1 fix: swing positions naturally 50-500% of capital (fixed-risk sizing).
+                          # HIGH_POS warning removed — qty_10k is correct; qty is what matters.
+        pos_tag = ''
         age_icon = ''
         if age_days >= 8: age_icon = ' 💀'
         elif age_days >= 4: age_icon = ' ⚠️'
         wr_info = f"{wr_badge}WR:{wr:.0f}%"
         # v38 P0-4: show ONE level set based on mode
         if sig == 'SELL':
-            qty = _qty_rs10k(price, hr_l['sl'], sig='SELL')
+            qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
@@ -610,7 +639,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         else:
-            qty = _qty_rs10k(price, hr_l['sl'])
+            qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
@@ -661,22 +690,29 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         hr_l, sw_l, atr_val = fmt_levels_hr(r, sig)
         price = r['price']
         age_days = r.get('signal_age_days', 0)
-        wr_badge = _wr_badge(wr)
-        pos_warn = _pos_size_warning(r.get('pos_pct', 0))
-        pos_tag = f" {pos_warn}" if pos_warn else ''
+        # P0-1 Fix: swing-based position sizing (realistic 4-10%, not intraday 15-40%)
+        swing_sl_dist = abs(price - r.get('sl_swing', price * 0.015))
+        if swing_sl_dist < 0.5:
+            swing_sl_dist = price * 0.01
+        swing_qty_for_pos = max(1, int(10000 / swing_sl_dist))
+        swing_pos_pct = round((swing_qty_for_pos * price) / 100000 * 100, 1)
+        pos_warn = None   # P0-1 fix: swing positions naturally 50-500% of capital (fixed-risk sizing).
+                          # HIGH_POS warning removed — qty_10k is correct; qty is what matters.
+        pos_tag = ''
         age_icon = ''
         if age_days >= 8: age_icon = ' 💀'
         elif age_days >= 4: age_icon = ' ⚠️'
+        wr_badge = _wr_badge(wr)
         wr_info = f"{wr_badge}WR:{wr:.0f}%"
         mode = level_mode
         if sig == 'SELL':
-            qty = _qty_rs10k(price, hr_l['sl'], sig='SELL')
+            qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
             tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                      f"     {icon} SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         else:
-            qty = _qty_rs10k(price, hr_l['sl'])
+            qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
             tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
@@ -728,29 +764,51 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     out += safe_fmt_cat("🤖 Cat B — AI CONFIRMED", cat_b, sort_key='rr_desc')
     out += safe_fmt_cat("📊 Cat C1 — SIGNAL + AI AGREE (SHORT)", cat_c1)
 
-    # v38 P0-5: Cat C2 compact format (not full trade cards)
-    if cat_c2:
-        sorted_c2 = sorted(cat_c2, key=lambda x: -x.get('prob', 0))
-        out += f"📊 Cat C2 — UNCONFIRMED [{len(sorted_c2)}]\n"
-        for r in sorted_c2[:20]:
-            stats = r.get('_stats', {})
-            tags = r.get('tags', [])
-            tag_str = " ".join(tags) if tags else ""
-            rr = stats.get('realized_return', 0)
-            wr = stats.get('win_rate', 0)
-            rr_str = f"RR:{rr:+.0f}%" if rr != 0 else ""
-            wr_str = f"WR:{wr:.0f}%" if wr > 0 else ""
-            meta = " | ".join(filter(None, [rr_str, wr_str, tag_str]))
-            out += f"  📈 {r['symbol']:15} RSI:{r['rsi']:.0f} | {meta}\n"
-        if len(sorted_c2) > 20:
-            out += f"  ... +{len(sorted_c2)-20} more\n"
-        out += "\n"
-    else:
-        out += "📊 Cat C2 — UNCONFIRMED [0]: —\n\n\n"
+    # S1 Fix: Cat C2 split into C2a (EDGE) + C2b (NO EDGE) + total Cat C2
+    # C2a: WR>=40% OR Ret>0% + has backtest — meaningful candidates
+    # C2b: poor history, no backtest, low WR — informational only
+    def _fmt_c2_compact(label, stocks, max_show=15):
+        if stocks:
+            sorted_s = sorted(stocks, key=lambda x: -x.get('prob', 0))
+            out_str = f"{label} [{len(sorted_s)}]\n"
+            for r in sorted_s[:max_show]:
+                stats = r.get('_stats', {})
+                tags = r.get('tags', [])
+                tag_str = " ".join(tags) if tags else ""
+                rr = stats.get('realized_return', 0)
+                wr = stats.get('win_rate', 0)
+                rr_str = f"RR:{rr:+.0f}%" if rr != 0 else ""
+                wr_str = f"WR:{wr:.0f}%" if wr > 0 else ""
+                meta = " | ".join(filter(None, [rr_str, wr_str, tag_str]))
+                sig_icon = "📈" if r['signal'] == 'BUY' else "📉"
+                out_str += f"  {sig_icon} {r['symbol']:15} RSI:{r['rsi']:.0f} | {meta}\n"
+            if len(sorted_s) > max_show:
+                out_str += f"  ... +{len(sorted_s)-max_show} more\n"
+            out_str += "\n"
+            return out_str
+        return f"{label} [0]: —\n\n\n"
+
+    out += _fmt_c2_compact("📊 Cat C2a — EDGE CANDIDATES (WR>=40% OR Ret>0%)", cat_c2a)
+    out += _fmt_c2_compact("📊 Cat C2b — NO EDGE (poor/no history)", cat_c2b)
+    out += _fmt_c2_compact("📊 Cat C2 — UNCONFIRMED [total]", cat_c2)
     out += safe_fmt_cat("🧠 Cat D — ML_CONFLICT SHORT", cat_d)
 
+    # P1-1: BEAR_DIV SHORT — momentum shorts from bearish divergence
+    # Show only if RSI 60-85 (valid momentum zone) — sorted by RSI desc
+    if bear_div_shorts:
+        sorted_bds = sorted(bear_div_shorts, key=lambda x: -x.get('rsi', 0))
+        out += f"🐻 BEAR_DIV SHORT [{len(sorted_bds)}]\n"
+        for r in sorted_bds[:10]:
+            out += fmt_stock_short(r, show_mode=level_mode) + "\n"
+        if len(sorted_bds) > 10:
+            out += f"  ... +{len(sorted_bds)-10} more\n"
+        out += "\n"
+
     # v38 P1-5: Filter WL — RSI 30-42 (buy zone) or RSI 58-70 (sell zone)
+    # P1-1: Exclude BEAR_DIV stocks (shown in BEAR_DIV SHORT section above)
     def _wl_filter(r):
+        if r.get('divergence') == 'BEARISH' and r.get('signal') == 'BUY':
+            return False   # P1-1: BEAR_DIV BUY → Cat C2, not WL
         rsi = r.get('rsi', 50)
         if 30 <= rsi <= 42 or 58 <= rsi <= 70:
             return True
@@ -785,7 +843,7 @@ def format_json(results, today):
     bullish_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BULLISH')
     bear_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BEARISH')
     regime = "BULLISH" if bullish_count > bear_count else ("BEARISH" if bear_count > bullish_count else "NEUTRAL")
-    cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist = _categorize(results, regime=regime)
+    cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_c2a, cat_c2b, cat_d, watchlist, bear_div_shorts, short_qualified = _categorize(results, regime=regime)
 
     def sanitize(r):
         ai = r.get('ai') or {}

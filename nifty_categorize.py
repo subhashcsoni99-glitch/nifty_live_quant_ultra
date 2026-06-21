@@ -24,12 +24,13 @@ from nifty_core import (
 # ─── Config (mirrored from scan.py for self-contained module) ─────────────────
 _NEG_HIST_RR_THRESHOLD = -2.0
 _NEG_HIST_WR_THRESHOLD = 40
-_MIN_WR_CAT_A = 45        # Cat A: WR >= 45%
-_MIN_WR_CAT_B = 35        # Cat B: WR >= 35% (v35)
+_MIN_WR_CAT_A = 40        # v41: was 45 — aim for 18-20/46 qualified stocks
+_MIN_WR_CAT_B = 33        # v41: was 35 — lowered to capture WR 33-35% momentum stocks
 _MIN_WR_TOP_PICK = 40     # TOP_PICK: WR >= 40%
 _BACKTEST_STALE_DAYS = 3
 _LOW_WR_WARNING = 35
-_POS_SIZE_WARNING_PCT = 10
+_POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
+_SWING_POS_SIZE_WARNING_PCT = 40  # P0-1 fix: swing positions typically 20-50% — flag at 40%
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ def _is_neg_hist(stats):
 
 
 def _is_poor_history(stats):
-    """POOR_HIST: rr < -2% OR wr < 45% — aligned with _MIN_WR_CAT_A=45 (v37)."""
+    """POOR_HIST: rr < -2% OR wr < 45% — aligned with _MIN_WR_CAT_A=40 (v41)."""
     rr = stats.get('realized_return', 0)
     wr = stats.get('win_rate', 0)
     return rr < -2.0 or wr < 45
@@ -58,10 +59,13 @@ def _wr_badge(wr):
         return '🔴'
 
 
-def _pos_size_warning(pos_pct):
-    """Return position sizing warning if > 10% of capital."""
-    if pos_pct > _POS_SIZE_WARNING_PCT:
-        return f'⚠️ OVERSIZE({pos_pct:.0f}%)'
+def _pos_size_warning(pos_pct, mode='swing'):
+    """P0-1 Fix: mode-aware threshold — swing uses 40%, intraday uses 10%.
+    Swing positions are naturally larger (tight SL = more shares for same risk).
+    Only flag at 40%+ (genuinely excessive capital commitment)."""
+    threshold = _SWING_POS_SIZE_WARNING_PCT if mode == 'swing' else _POS_SIZE_WARNING_PCT
+    if pos_pct > threshold:
+        return f'⚠️ HIGH_POS({pos_pct:.0f}%)'
     return None
 
 
@@ -200,6 +204,8 @@ def _categorize(results, regime='BULLISH'):
     Cat B:   AI HIGH/MEDIUM + wr >= 35% + rr >= -2% + no severe NEG_HIST
     Cat C1:  RSI>70 SHORT (independent momentum) + AI/ML-agreeing SHORTs
     Cat C2:  UNCONFIRMED — AI neutral, NEG_HIST, WR<threshold, level mismatch
+    Cat C2a: EDGE CANDIDATES — WR>=40% OR Ret>0% (has some backtest validation)
+    Cat C2b: NO EDGE — poor history, no backtest, no validation
     Cat D:   ML_CONFLICT SHORT (ML=DOWN + AI=BULLISH) — ML predicts down, AI says up
     WATCHLIST: RANGE-bound or BEAR_DIV+BUY (contradictory) stocks
     """
@@ -248,6 +254,8 @@ def _categorize(results, regime='BULLISH'):
             if r_obj.get('_regime_label') == '🔴 CONTRARIAN':
                 _add_tag(r_obj, '🔴 CONTRARIAN')
 
+        # RSI used in both BUY and SELL blocks — define once here (P0-2 fix)
+        rsi = r.get('rsi', 0)
         if sig == 'RANGE':
             _add_tag(r, '📋 RANGE')
             if age_days > 1:
@@ -263,12 +271,12 @@ def _categorize(results, regime='BULLISH'):
             adx_trending = s3.get('adx_trending', None)
             adx_ok = bool(adx_trending is True or (adx_trending is None and adx_val >= 25))
 
-            # C5 fix: BEAR_DIV + BUY is a contradictory signal — route to RANGE
+            # P1-1 Fix: BEAR_DIV + BUY = contrarian, no edge → Cat C2 (not WL)
+            # Don't auto-add to WL — Cat C2 is shown separately
             if div == 'BEARISH' and sig == 'BUY':
-                _add_tag(r, 'BEAR_DIV')
-                _add_tag(r, '⚠️ CONTRADICTORY')
+                _add_tag(r, '🐻 BEAR_DIV')
                 _tag_all(r)
-                watchlist.append(r)
+                cat_c2.append(r)
                 continue
 
             elif ai_bull and ml_up:
@@ -355,14 +363,17 @@ def _categorize(results, regime='BULLISH'):
             ml_down = ml_dir == 'DOWN'
             ai_bear = ai_dir == 'BEARISH'
 
-            # ── C1/C2/C3: RSI>70 SHORT — independent momentum (no AI/ML filter needed) ──
-            # RSI>70 SHORTs fire at source (nifty_core.py P0-4) as direct SELL signals.
-            # They bypass all AI/ML checks. Route directly to Cat C1 for TOP_SHORT visibility.
-            rsi = r.get('rsi', 0)
+            # P0-2 Fix: RSI>70 SHORT → Cat C1 only if backtest edge exists
+            # NO backtest OR WR<40 AND rr<=0 → Cat C2 (no validated edge)
             if rsi > 70:
                 _add_tag(r, '🎯 RSI_SHORT')
-                _tag_all(r)
-                cat_c1.append(r)
+                if wr >= 40 or rr > 0:
+                    _tag_all(r)
+                    cat_c1.append(r)
+                else:
+                    _add_tag(r, '⚠️ NO_EDGE')
+                    _tag_all(r)
+                    cat_c2.append(r)
 
             # ── AI_CONFLICT: ML=DOWN + AI=BULLISH — ML predicts down, AI says up ──
             # C3 fix: This is ML_CONFLICT, not AI_CONTRADICT. Route to Cat D.
@@ -429,6 +440,71 @@ def _categorize(results, regime='BULLISH'):
                 _tag_all(r)
                 cat_c2.append(r)
 
+    # P1-1: BEAR_DIV SHORT sublist — separate from Cat C1
+    # Bearish divergence + RSI 60-85 in bear regime (no backtest needed for momentum)
+    bear_div_shorts = [r for r in (cat_c1 + cat_c2) if
+                       r.get('divergence') == 'BEARISH' and
+                       r['signal'] == 'SELL' and
+                       60 <= r.get('rsi', 0) <= 85]
+    for r in bear_div_shorts:
+        _add_tag(r, '🐻 BEAR_DIV_SHORT')
+    # Remove BEAR_DIV SHORT from Cat C1 and Cat C2 (shown separately)
+    cat_c1 = [r for r in cat_c1 if r not in bear_div_shorts]
+    cat_c2 = [r for r in cat_c2 if r not in bear_div_shorts]
+
+    # P1-3: Upgrade ML_CONTRADICT in Cat C2 — if WR>=45% + Ret>0 + Sharpe>1.5, move to Cat A-
+    # ML says DOWN but backtest proves edge → strong enough to act on despite ML disagreement
+    # Note: ML_CONTRADICT stocks go directly to Cat C2 (not Cat B), so upgrade must check Cat C2
+    for r in cat_c2[:]:
+        stats = r.get('_stats', {})
+        rr = stats.get('realized_return', 0)
+        wr = stats.get('win_rate', 0)
+        sharpe = stats.get('sharpe', 0)
+        tags = r.get('tags', [])
+        if '⚠️ ML_CONTRADICT' in tags and wr >= 45 and rr > 0 and sharpe > 1.5:
+            _add_tag(r, '✅ EDGE_VALIDATED')
+            _add_tag(r, '⭐ TOP_PICK')  # eligible for TOP_PICK
+            cat_c2.remove(r)
+            cat_a_minus.append(r)
+            # Re-evaluate TOP_PICK since we're now in cat_a_minus
+            # (TOP_SHORT/TOP_PICK selection runs after this loop)
+
+    # P1-3 Fix: Upgrade ML_CONTRADICT in Cat B — same logic as Cat C2 upgrade
+    # If WR>=45% + Ret>0 + Sharpe>=1.5 despite ML=DOWN → has proven edge → Cat A-
+    for r in cat_b[:]:
+        stats = r.get('_stats', {})
+        rr = stats.get('realized_return', 0)
+        wr = stats.get('win_rate', 0)
+        sharpe = stats.get('sharpe', 0)
+        tags = r.get('tags', [])
+        if '⚠️ ML_CONTRADICT' in tags and wr >= 45 and rr > 0 and sharpe >= 1.0:
+            _add_tag(r, '✅ EDGE_VALIDATED')
+            _add_tag(r, '⭐ TOP_PICK')
+            cat_b.remove(r)
+            cat_a_minus.append(r)
+
+    # ── S1 Fix: Split Cat C2 into C2a (EDGE) + C2b (NO EDGE) ─────────────────
+    # C2a: stocks with some backtest validation (WR>=40% OR Ret>0%)
+    # C2b: stocks with no validation (poor history, no backtest, low WR)
+    cat_c2a, cat_c2b = [], []
+    for r in cat_c2:
+        stats = r.get('_stats', {})
+        rr = stats.get('realized_return', 0)
+        wr = stats.get('win_rate', 0)
+        tags_str = ' '.join(r.get('tags', []))
+        # C2a: has edge (WR>=40% OR positive return) + not a pure no_history case
+        if (wr >= 40 or rr > 0) and 'NO_BACKTEST' not in tags_str:
+            cat_c2a.append(r)
+        else:
+            cat_c2b.append(r)
+    # Sort C2a by WR descending (best edge first), C2b by RSI desc for SHORTs
+    cat_c2a.sort(key=lambda x: -x.get('win_rate', 0))
+    cat_c2b.sort(key=lambda x: -x.get('rsi', 50))
+
+    # P2: Count SHORT-qualified stocks (for scan header)
+    short_qualified = [r for r in cat_a + cat_a_minus + cat_b + cat_c1 if r['signal'] == 'SELL']
+    _SHORT_QUALIFIED_COUNT = len(short_qualified)
+
     # ── TOP_SHORT selection (C1 fix) — now reads Cat C1 too ──
     for r in cat_a + cat_a_minus + cat_b + cat_c1:
         stats = r.get('_stats', {})
@@ -462,8 +538,9 @@ def _categorize(results, regime='BULLISH'):
             r['_starred'] = True
             _add_tag(r, '⭐ TOP_PICK')
 
-    return cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_d, watchlist
-
+    # P2: Export SHORT count for scan header
+    short_qualified = [r for r in cat_a + cat_a_minus + cat_b + cat_c1 if r['signal'] == 'SELL']
+    return cat_a, cat_a_minus, cat_b, cat_c1, cat_c2, cat_c2a, cat_c2b, cat_d, watchlist, bear_div_shorts, short_qualified
 
 # Set the alias
 categorize_results = _categorize

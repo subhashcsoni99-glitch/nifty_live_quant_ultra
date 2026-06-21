@@ -743,13 +743,15 @@ def build_ml_features(df, idx=None):
     all_f = [0 if (np.isnan(x) or np.isinf(x)) else x for x in all_f]
     return np.array([all_f])
 
-# ─── 9-Stage AI Opinion Pipeline ───────────────────────────────────────────────
+# ─── 9-Stage LLM-Guided Analysis Pipeline ────────────────────────────────────
 def ai_opinion_pipeline(symbol, price, rsi, macd, macd_sig, atr, vol_ratio, ret5, df, momentum_mode=False):
     """
-    Full 9-stage AI opinion pipeline.
+    9-stage LLM-guided analysis (rule-seeded prompts → Ollama LLM → structured output).
+    Not a trained ML model — uses LLM to synthesize indicators into an opinion.
+    Fallback: if Ollama is offline, fully deterministic rule-based output is returned.
+
     Stages: Market Regime → News Sentiment → Scanner → Validator → Options → Risk → Execution → Replay → Learning
-    
-    momentum_mode: if True, switches to momentum mode logic (top/bottom picking)
+    momentum_mode: switches to momentum mode logic (top/bottom picking)
     """
     from datetime import datetime
 

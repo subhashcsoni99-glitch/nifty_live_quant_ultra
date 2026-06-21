@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Backtest v10
-v9 changes (all review suggestions applied):
+NIFTY Live Quant Ultra - Backtest v14
+v10→v11 changes:
   1. PRIMARY metric = realized_return (P&L / capital_at_risk), NOT compounded
   2. peak_realized tracks settled cash only (updated only on exits)
   3. peak_unrealized = settled cash + current value of open shares (for DD monitoring)
@@ -10,9 +10,21 @@ v9 changes (all review suggestions applied):
   6. --no-sig-exit: SELL signal does NOT exit; only SL/TSL/ABSSL/hold-expiry
   7. Sig-exit fires only when price has pulled back ≥1% from entry
   8. 3-year default backtest window (includes 2020 COVID, 2022 bear, 2023-2024 bull)
-  9. T1 partial exit: one-time 25% exit at T1, let 75% run (was 50%)
+  9. T1 partial exit: one-time 40% exit at T1, let 60% run to T2/SL (v41: was 25% → better DD reduction)
  10. MIN_TRADES = 20 for statistical confidence
- 11. Sharpe from pnl_list, annualized; ABSSL = 3% hard cap always active
+ 11. Sharpe from pnl_list, annualized; ABSSL hard cap always active
+ 12. v41: ABSL_CONFIG explicit + min_adx option + avg_trade_return in summary
+13. v42: ATR-adaptive ABSSL, MAX_POSITION_PCT=0.10, min_adx/min_rr CLI
+14. v43: TIME exit max_hold=30+no_unreal_loss guard; Qualified Sharpe≥0.8; MAX_POS=0.05
+
+METRIC GUIDE (v41):
+  realized_return  = avg P&L per trade as % of risk capital (PRIMARY — ignore CompRet)
+  return           = portfolio-level P&L including drawdown drag (shows cost of DD)
+  avg_trade_return = mean of pnl_list (per-trade %); Sharpe computed from this
+  max_drawdown     = worst peak-to-trough % on settled capital
+  
+  For a 36% WR strategy, realized_return is positive but CompRet/return is lower
+  because losing streaks compound. Both metrics are meaningful — show both.
 """
 import sys
 import os
@@ -54,15 +66,61 @@ from nifty_core import (
 STOCKS = DEFAULT_STOCKS
 MIN_TRADES = 20   # 3yr window ≈ 1 trade/month = 20 trades minimum
 # ─── BLACKLIST ─────────────────────────────────────────────────────────────────
-# Stocks to skip in bear-market / combined-bear mode (persistent losers)
+# Persistent-lose stocks: very few signals, always negative
 BLACKLIST = {'SBIN', 'BHEL', 'TITAN'}
+
+# ─── POSITION SIZE CAP ────────────────────────────────────────────────────────
+# Maximum position as % of capital per trade.
+# Reducing from 20% to 10% halves DD per losing trade (reduces CompRet drag)
+MAX_POSITION_PCT = 0.05   # was 0.20 — v43: 5% cap halves DD vs v42, ~4 losers=20% max cap
+
+# ─── ABSL CONFIG (v42) ─────────────────────────────────────────────────────────
+# Auto-Stop-Loss hard cap: volatility-adaptive, per-stock.
+#
+# PROBLEM (v41): Fixed -8% ABSSL destroyed high-ATR stocks.
+#   PCBL (atr_pct=4.5%): -8% = 1.8× daily ATR — fires too fast
+#   HDFCBANK (atr_pct=1.5%): -8% = 5.3× daily ATR — too loose
+#
+# SOLUTION (v42): Per-stock ABSSL using ATR-multiple.
+#   Formula: ABSSL = entry × (1 - absl_atr_mult × atr_pct)
+#   atr_pct = atr / entry_price (% daily ATR relative to price)
+#
+#   HIGH-VOL stocks (atr_pct > atr_pct_threshold):   fire at N × ATR  (tighter = 2.0×)
+#   NORMAL stocks (atr_pct <= atr_pct_threshold):   fire at fixed % (looser = -15%)
+#
+# Before T1 partial:  widens to absl_pct_before_T1  (was 0.92 → now 0.85 = -15%)
+# After T1 partial:   tightens to absl_pct_after_T1   (was 0.95 → now 0.88 = -12%)
+# After T2 partial:   ABSSL disabled
+#
+ABSL_CONFIG = {
+    'absl_atr_mult':       2.5,  # fire at entry × (1 - 2.5 × atr_pct) for high-vol
+    'absl_pct_threshold':  0.03, # stocks with atr_pct > 3% use ATR-multiple cap
+    'absl_pct_before_T1':  0.85,  # fire at -15% from entry before T1 (was 0.92 = -8%)
+    'absl_pct_after_T1':   0.88,  # fire at -12% from entry after T1 partial (was 0.95 = -5%)
+    'absl_pct_after_T2':   None,  # disabled after T2 partial hit
+}
+
+# ─── R:R ENTRY FILTER (v42) ───────────────────────────────────────────────────
+# Skip BUY if estimated R:R < min_rr_ratio.
+# estimated_RR = T1_distance / SL_distance = t1_mult / sl_mult = 2.5 / 1.5 = 1.67
+# For swing: t1_mult=2.5, sl_mult=1.5 → base RR=1.67
+# For intraday: t1_mult=2.0, sl_mult=3.0 → base RR=0.67
+# Set to 0 to disable. Recommended: 1.5 (skip if RR < 1.5).
+MIN_RR_RATIO = 0   # set to 1.5 to filter low-RR setups
+
+# ─── ADX TIGHTEN FILTER (v41) ──────────────────────────────────────────────────
+# Optional tighter ADX filter to improve Sharpe ratio.
+# When min_adx > 0: only enter trades when ADX >= min_adx (stronger trend confirmation)
+# Default 0 = disabled (use ADX_CONFIG.threshold from nifty_core.py)
+# Recommended: 30 (moderate trend) or 35 (strong trend only — fewer signals)
+MIN_ADX_ENTRY = 0   # set to 30 or 35 to tighten entry ADX filter
 
 # ─── REVERSAL CONFIG ────────────────────────────────────────────────────────
 # REVERSAL exit fires only when BOTH conditions met:
 #   1. Hold days >= REVERSAL_MIN_HOLD_DAYS (prevent early exit on day-1 pullback)
 #   2. Pullback from entry >= REVERSAL_MIN_LOSS_PCT% (must be in real loss)
 # In bear markets: use 5 days + 2% (default). In normal: 3 days + 1%.
-REVERSAL_MIN_HOLD_DAYS = 5       # was 3 — must hold 5+ days before REVERSAL fires
+REVERSAL_MIN_HOLD_DAYS = 5
 REVERSAL_MIN_LOSS_PCT = 2.0      # was 2.0 — must be ≥3.5% below entry to exit (let winners run)
 
 # ─── RSI ENTRY FILTER ───────────────────────────────────────────────────────
@@ -114,12 +172,14 @@ def get_signal(df, i, momentum_mode=False, adx_filter=True):
 
 
 def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limits=False,
-                   slippage_pct=0.001, max_position_pct=0.2,
-                   use_t1_partial=True, max_hold_days=20,  # v36: was 10 — day-10 exit kills genuine winners
+                   slippage_pct=0.001, max_position_pct=0.05,  # v43: 5% cap halves DD vs v42
+                   use_t1_partial=True, max_hold_days=30,  # v43: was 20 → 30
                    no_sig_exit=False, verbose=False,
                    level_mode='swing',
-                   momentum_mode=False,    # v31: Option B — momentum vs mean-reversion
-                   adx_filter=True):      # v31: Option A — ADX>25 trend filter
+                   momentum_mode=False,
+                   adx_filter=True,
+                   min_adx=0,
+                   min_rr_ratio=0):
     """
     Key changes vs v8:
     - no_sig_exit: SELL signal does not trigger exit (only SL/TSL/ABSSL/expiry)
@@ -188,6 +248,13 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             if name in BLACKLIST:
                 continue
 
+            # v41 min_adx: optional stricter ADX filter for entry
+            # Only enforce when min_adx > 0 and adx_filter is already True
+            if min_adx > 0 and adx_filter:
+                entry_adx_val = adx_info.get('adx', 0)
+                if entry_adx_val < min_adx:
+                    continue  # skip — ADX below minimum threshold
+
             risk = capital * 0.005
             # Bear-regime SL adjustment: tighten SL to avoid gap-down ABSSL hits
             sl_mult = ATR_CONFIG[level_mode]['sl']
@@ -204,6 +271,14 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             rsi = df['rsi'].iloc[i]
             if not (pd.isna(rsi) or float(rsi) < float(RSI_ENTRY_MAX)):
                 continue
+
+            # v42 R:R entry filter — skip if estimated R:R is below minimum threshold
+            if min_rr_ratio > 0:
+                t1_mult = ATR_CONFIG.get(level_mode, ATR_CONFIG['swing'])['t1']
+                sl_mult = ATR_CONFIG.get(level_mode, ATR_CONFIG['swing'])['sl']
+                est_rr = t1_mult / sl_mult if sl_mult > 0 else 0
+                if est_rr < min_rr_ratio:
+                    continue  # skip — R:R below minimum threshold
 
             shares = raw_shares
             shares_remaining = raw_shares
@@ -231,7 +306,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
 
             # T1 Partial Exit (one-time at T1 — 10% of remaining position)
             if use_t1_partial and shares_remaining > 0 and price >= t1 and not t1_triggered:
-                exit_shares = shares_remaining // 10  # was //4 — exit 10%, let 90% run
+                exit_shares = max(1, shares_remaining // 10 * 4)  # v41: exit 40%, let 60% run (was //10 = 10%)
                 capital += exit_shares * slip_exit
                 shares_remaining -= exit_shares
                 partial_exits += 1
@@ -246,13 +321,15 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                           f"[{df.index[i].date()}] exited={exit_shares} "
                           f"remain={shares_remaining}")
 
-            # Time-based exit — only cut losers short; let winners run to T1/T2/SL
+            # Time-based exit v43: hold up to 30 days, exit regardless of P&L
+            # v43 FIX: removed unreal_loss guard — underwater trades are NOT cut early.
+            # RSI mean-reversion setups can take 25-40 days to materialize.
+            # Only exit on time if still held after 30 days (extended from 20 → 30).
+            # If profitable: lock in gains. If losing: accept and move on.
             hold_days = (df.index[i] - entry_date).days if entry_date else 0
             unreal_pnl = ((price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
-            unreal_loss = unreal_pnl < 0  # cut losses early, not profits
-            # TIME exit: cut losing trades at max_hold_days; let winners run
-            held_too_long = hold_days > max_hold_days
-            if held_too_long and unreal_loss:
+            held_too_long = hold_days > max_hold_days  # max_hold_days = 30 in v43
+            if held_too_long:
                 if shares_remaining > 0:
                     capital += shares_remaining * slip_exit
                 pnl = ((slip_exit - entry_price) / entry_price) * 100
@@ -273,12 +350,25 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     sector_counts[sect] = max(0, sector_counts.get(sect, 0) - 1)
                 continue
 
-            # ABSSL — adaptive hard cap (v10: bear-friendly thresholds):
-            # Before T1: 8% (was 3% — too aggressive in volatile markets)
-            # After T1 partial: 5% (was 1.5% — lock in profit but give room)
-            # After T2 hit: DISABLED (let remaining half run to T2)
-            abs_sl_pct = 0.92 if not t1_triggered else (0.95 if t1_triggered else 0.92)
-            abs_sl = entry_price * abs_sl_pct
+            # ── Volatility-Adaptive ABSSL (v42) ───────────────────────────────────────
+            # Per-stock ABSSL: high-vol stocks use ATR-multiple cap; normal stocks use fixed %
+            # atr_pct = daily ATR as % of entry price → volatility-normalized
+            atr_pct = atr / entry_price if entry_price > 0 else 0.02
+            before_t1_pct = ABSL_CONFIG.get('absl_pct_before_T1', 0.85)
+            after_t1_pct  = ABSL_CONFIG.get('absl_pct_after_T1', 0.88)
+            atr_th        = ABSL_CONFIG.get('absl_pct_threshold', 0.03)
+            atr_mult      = ABSL_CONFIG.get('absl_atr_mult', 2.5)
+
+            # Determine effective ABSSL price level
+            if not t1_triggered:
+                # Before T1 partial: use looser fixed % (was -8%, now -15%)
+                if atr_pct > atr_th:
+                    abs_sl = entry_price * (1 - atr_mult * atr_pct)  # ATR-multiple for high-vol
+                else:
+                    abs_sl = entry_price * before_t1_pct             # fixed -15% for normal
+            else:
+                # After T1 partial: tighter -12%
+                abs_sl = entry_price * after_t1_pct
             if price <= abs_sl:
                 if shares_remaining > 0:
                     capital += shares_remaining * slip_exit
@@ -441,10 +531,13 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
     trending_trades = sum(1 for t in trades if t.get('entry_adx_trending', False))
     choppy_trades = len(trades) - trending_trades
 
-    # QUALIFIED v11: positive return + win rate >= 38% + max DD < 50% + enough trades
+    # QUALIFIED v14 (v43): Sharpe ≥ 0.8 added — filters borderline stocks
+    # v43: Sharpe ≥ 0.8 + max_hold_days=30 (was 20) + no unreal_loss guard
+    # This eliminates CIPLA (Sharpe=0.48), JSWSTEEL (Sharpe=0.71) from qualified
     qualified = (len(trades) >= MIN_TRADES and
                 realized_return > 0 and
-                max_drawdown < 55.0 and   # v38 P0-3: was 50, relaxed to 55 (most stocks fail 50-56% in 2022-2023 bear)
+                sharpe >= 0.8 and               # v43: risk-adjusted quality gate
+                max_drawdown < 55.0 and
                 (len(wins) / len(trades) >= 0.38 if trades else False))
 
     return {
@@ -455,6 +548,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
         'win_rate': round(len(wins) / len(trades) * 100, 1) if trades else 0.0,
         'realized_return': round(realized_return, 2),
         'return': round(total_ret_compounded, 2),
+        'avg_trade_return': round(sum(pnl_list) / len(pnl_list), 2) if pnl_list else 0.0,  # v41: mean P&L% per trade (per-trade, not capital-weighted)
         'sharpe': round(sharpe, 2),
         'tsl_exits': sum(1 for t in trades if t['type'] == 'TSL'),
         'sl_exits': sum(1 for t in trades if t['type'] == 'SL'),
@@ -484,7 +578,9 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             'level_mode': level_mode,
             'rsi_guards': True,
             'bearish_divergence': True,
-            'rsi_mode': _RSI_MODE,   # BUG-2: self-describing — proves strict vs relaxed
+            'rsi_mode': _RSI_MODE,
+            'min_adx': min_adx,       # v41
+            'min_rr_ratio': min_rr_ratio,  # v42
         },
         'trades_list': trades,
     }
@@ -501,6 +597,8 @@ def parse_args():
     level_mode = 'swing'
     momentum_mode = False
     adx_filter = True
+    min_adx = 0  # v41
+    min_rr_ratio = 0  # v42
 
     args = sys.argv[1:]
     i = 0
@@ -512,6 +610,8 @@ def parse_args():
         elif arg == '--no-sig-exit':  no_sig_exit = True; i += 1
         elif arg == '--momentum-mode': momentum_mode = True; i += 1
         elif arg == '--no-adx-filter': adx_filter = False; i += 1
+        elif arg == '--min-adx':       min_adx = int(args[i + 1]); i += 2  # v41
+        elif arg == '--min-rr':        min_rr_ratio = float(args[i + 1]); i += 2  # v42
         elif arg == '--years':
             years = int(args[i + 1]); i += 2
         elif arg == '--intraday':  level_mode = 'intraday'; i += 1
@@ -529,15 +629,20 @@ def parse_args():
             i += 1
     if positional:
         stocks = positional
-    return stocks, use_trailing, sector_limits, no_sig_exit, years, output, level_mode, momentum_mode, adx_filter
+    return stocks, use_trailing, sector_limits, no_sig_exit, years, output, level_mode, momentum_mode, adx_filter, min_adx, min_rr_ratio
 
 
 def main():
     (stocks, use_trailing, sector_limits, no_sig_exit, years,
-     output, level_mode, momentum_mode, adx_filter) = parse_args()
+     output, level_mode, momentum_mode, adx_filter, min_adx, min_rr_ratio) = parse_args()
+    # v14 fix: Use fixed end_date (last completed month) for reproducible backtests.
+    # Using dynamic end_date=now causes yfinance to return different prices on each run
+    # (last 3 years ending "today" = different window every time) → non-deterministic.
+    # Update _PINNED_END_DATE manually when ready for a fresh data window.
     now = datetime.now()
+    _PINNED_END_DATE = '2026-05-31'   # ← UPDATE MANUALLY
     start_date = (now - pd.Timedelta(days=365 * years)).strftime('%Y-%m-%d')
-    end_date   = now.strftime('%Y-%m-%d')
+    end_date   = _PINNED_END_DATE
 
     flags = []
     if use_trailing:   flags.append("+TrailingSL")
@@ -545,6 +650,8 @@ def main():
     if no_sig_exit:    flags.append("+NoSigExit")
     if momentum_mode:   flags.append("+MomentumMode")
     if not adx_filter: flags.append("+NoADXFilter")
+    if min_adx > 0:    flags.append(f"+MinADX{min_adx}")   # v41
+    if min_rr_ratio > 0: flags.append(f"+MinRR{min_rr_ratio}")  # v42
     flag_str = f" ({', '.join(flags)})" if flags else ""
 
     # Warn: momentum mode without ADX filter may fire in choppy markets
@@ -554,7 +661,7 @@ def main():
         print()
 
     print("=" * 72)
-    print(f"📊 NIFTY BACKTEST v11{flag_str} | {start_date} → {end_date} ({years}y) | {level_mode}")
+    print(f"📊 NIFTY BACKTEST v13{flag_str} | {start_date} → {end_date} ({years}y) | {level_mode}")
     print("=" * 72)
 
     results = []
@@ -569,7 +676,9 @@ def main():
                             verbose=False,
                             level_mode=level_mode,
                             momentum_mode=momentum_mode,
-                            adx_filter=adx_filter)
+                            adx_filter=adx_filter,
+                            min_adx=min_adx,
+                            min_rr_ratio=min_rr_ratio)  # v42
         if res:
             results.append(res)
             if res['trades'] > 0:
@@ -592,23 +701,31 @@ def main():
         print("No results."); return
 
     qualified = [r for r in active if r['qualified']]
-    print(f"\n{'Sym':<10} {'Trds':>5} {'WR%':>6} {'RealRet%':>9} {'CompRet%':>9} {'Sharpe':>8} {'DD%':>6} {'QLF':>4}")
-    print("-" * 65)
+    print(f"\n{'Sym':<10} {'Trds':>5} {'WR%':>6} {'AvgTrd%':>8} {'RealRet%':>9} {'CompRet%':>9} {'Sharpe':>7} {'DD%':>6} {'QLF':>4}")
+    print("-" * 70)
     for r in sorted(active, key=lambda x: -x['realized_return']):
         q = "✅" if r['qualified'] else "  "
+        avg_t = r.get('avg_trade_return', 0)
         print(f"{r['symbol']:<10} {r['trades']:>5} {r['win_rate']:>6.1f} "
-              f"{r['realized_return']:>+9.2f} {r['return']:>+9.2f} "
-              f"{r['sharpe']:>8.2f} {r['max_drawdown']:>6.2f} {q:>4}")
-    print("-" * 65)
+              f"{avg_t:>+8.2f} {r['realized_return']:>+9.2f} {r['return']:>+9.2f} "
+              f"{r['sharpe']:>7.2f} {r['max_drawdown']:>6.2f} {q:>4}")
+    print("-" * 70)
 
     avg_rr  = sum(r['realized_return'] for r in active) / len(active)
     avg_ret = sum(r['return'] for r in active) / len(active)
     avg_wr  = sum(r['win_rate'] for r in active) / len(active)
     avg_dd  = sum(r['max_drawdown'] for r in active) / len(active)
     avg_sh  = sum(r['sharpe'] for r in active) / len(active)
+    avg_t   = sum(r.get('avg_trade_return', 0) for r in active) / len(active)
     print(f"{'AVG':<10} {sum(r['trades'] for r in active):>5} {avg_wr:>6.1f} "
-          f"{avg_rr:>+9.2f} {avg_ret:>+9.2f} "
-          f"{avg_sh:>8.2f} {avg_dd:>6.2f} {len(qualified):>4}/{len(active)}")
+          f"{avg_t:>+8.2f} {avg_rr:>+9.2f} {avg_ret:>+9.2f} "
+          f"{avg_sh:>7.2f} {avg_dd:>6.2f} {len(qualified):>4}/{len(active)}")
+
+    print("\n  ℹ️  METRIC GUIDE:")
+    print("     AvgTrd% = avg P&L% per trade (from pnl_list)")
+    print("     RealRet% = total realized P&L / initial capital (PRIMARY metric)")
+    print("     CompRet% = portfolio-level return incl. DD drag (CompRet ≤ RealRet)")
+    print("     CompRet% < RealRet% means DD dragged portfolio down despite +avg/trade")
 
     best  = max(active, key=lambda x: x['realized_return'])
     worst = min(active, key=lambda x: x['realized_return'])

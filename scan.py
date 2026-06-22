@@ -227,20 +227,22 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 # ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
 # Override with --no-adx flag to disable
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
-def get_level_modes_extended(price, atr, atr5=None):
+def get_level_modes_extended(price, atr, atr5=None, entry_price=None):
     """Return all level sets for a stock.
     v43: tight mode uses ATR(5) for T1, ATR(14) for T2/T3
          T1 = entry + 0.75×ATR(5)   (tightest scalp)
          T2 = entry + 0.75×ATR(14)  (medium)
          T3 = entry + 1.5×ATR(14)   (full target)
+    v44: entry_price (prev_close) used as baseline, NOT current price
     """
     if atr5 is None:
         atr5 = atr  # fallback
+    entry = entry_price if entry_price is not None else price
     tight_t1 = atr5 * 0.75
     tight_t2 = atr * 0.75
     tight_t3 = atr * 1.5
     return {
-        'tight':   {'sl': round(price - atr * 1.5, 2), 't1': round(price + tight_t1, 2), 't2': round(price + tight_t2, 2), 't3': round(price + tight_t3, 2)},
+        'tight':   {'sl': round(entry - atr * 1.5, 2), 't1': round(entry + tight_t1, 2), 't2': round(entry + tight_t2, 2), 't3': round(entry + tight_t3, 2)},
         'regular': calc_levels(price, atr, mode='intraday'),
         'swing':   calc_levels(price, atr, mode='swing'),
     }
@@ -266,11 +268,27 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     atr5 = float(df['atr5'].iloc[-1]) if 'atr5' in df.columns and not pd.isna(df['atr5'].iloc[-1]) else atr
     change_pct = ((price - prev) / prev * 100) if prev and prev > 0 else 0
 
+    # v44: market condition from ADX + MA
+    adx = float(df['adx'].iloc[-1]) if 'adx' in df.columns and not pd.isna(df['adx'].iloc[-1]) else 0
+    di_plus = float(df['adx_di_plus'].iloc[-1]) if 'adx_di_plus' in df.columns and not pd.isna(df['adx_di_plus'].iloc[-1]) else 0
+    di_minus = float(df['adx_di_minus'].iloc[-1]) if 'adx_di_minus' in df.columns and not pd.isna(df['adx_di_minus'].iloc[-1]) else 0
+    ma20 = float(df['ma20'].iloc[-1]) if 'ma20' in df.columns and not pd.isna(df['ma20'].iloc[-1]) else 0
+    ma50 = float(df['ma50'].iloc[-1]) if 'ma50' in df.columns and not pd.isna(df['ma50'].iloc[-1]) else 0
+    ma100 = float(df['ma100'].iloc[-1]) if 'ma100' in df.columns and not pd.isna(df['ma100'].iloc[-1]) else 0
+    # Market condition
+    if adx < 20:   condition = 'FLAT'
+    elif adx < 25: condition = 'CHOPPY'
+    elif di_plus > di_minus and price > ma20 and price > ma50: condition = 'BULL'
+    elif di_minus > di_plus and price < ma20 and price < ma50: condition = 'BEAR'
+    elif di_plus > di_minus: condition = 'BULL_PULLBACK'
+    elif di_minus > di_plus: condition = 'BEAR_RALLY'
+    else: condition = 'NEUTRAL'
+
     sig_val, meta, _ = core_get_signal(df, len(df) - 1, momentum_mode=momentum_mode)
     signal = meta['signal']
     divergence = meta.get('divergence')
 
-    levels = get_level_modes_extended(price, atr, atr5=atr5)
+    levels = get_level_modes_extended(price, atr, atr5=atr5, entry_price=prev)  # v44: use prev_close as entry
     if _OPTION_C_ACTIVE:
         levels['swing'] = {'sl': round(price - atr * 0.75, 0), 't1': round(price + atr * 1.5, 0), 't2': round(price + atr * 2.5, 0)}
     sr = calc_support_resistance(df)
@@ -305,6 +323,8 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
         'symbol': sym, 'price': price, 'prev': prev,
         'rsi': round(rsi, 1), 'change': round(change_pct, 2),
         'signal': signal, 'prob': prob,
+        'condition': condition, 'adx': round(adx, 1),
+        'di_plus': round(di_plus, 1), 'di_minus': round(di_minus, 1),
         'sl_tight': levels['tight']['sl'], 't1_tight': levels['tight']['t1'], 't2_tight': levels['tight']['t2'], 't3_tight': levels['tight']['t3'],
         'sl_intraday': levels['regular']['sl'], 't1_intraday': levels['regular']['t1'], 't2_intraday': levels['regular']['t2'],
         'sl_swing': levels['swing']['sl'], 't1_swing': levels['swing']['t1'], 't2_swing': levels['swing']['t2'],
@@ -565,15 +585,15 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
 
     def fmt_levels_hr(r, sig, tight=False, atr5=None):
         """Compute intraday + swing levels for display.
-        v43 Fix: T1<T2<T3 structure for tight mode:
-          BUY: T1 = entry + 0.75×ATR5, T2 = entry + 0.75×ATR14, T3 = entry + 1.5×ATR14
-          SELL: T1 = entry - 0.75×ATR5, T2 = entry - 0.75×ATR14, T3 = entry - 1.5×ATR14
+        v44: tight mode uses r['prev'] (prev_close) as entry, NOT current price.
+        This ensures T1/T2/T3 are anchored to day baseline, not live price.
         """
         h = r.get('hourly')
         price = r['price']
+        prev = r.get('prev', price)
         atr = r.get('atr', price * 0.02)
         if atr5 is None:
-            atr5 = atr
+            atr5 = r.get('atr5', atr)
 
         if not h:
             tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight')
@@ -586,19 +606,21 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             return {'sl':round(id_sl,1),'t1':round(id_t1,0),'t2':round(id_t2,0),'t3':round(tk_t3,0) if tk_t3 else None}, {'sl':round(sw_sl,1),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}, atr, atr5
 
         if tight:
+            # v44: use prev_close as entry
+            entry_t = prev
             if sig == 'SELL':
                 hr_l = {
-                    'sl': round(price + atr * 1.5, 0),
-                    't1': round(price - atr5 * 0.75, 0),
-                    't2': round(price - atr * 0.75, 0),
-                    't3': round(price - atr * 1.5, 0),
+                    'sl': round(entry_t + atr * 1.5, 0),
+                    't1': round(entry_t - atr5 * 0.75, 0),
+                    't2': round(entry_t - atr * 0.75, 0),
+                    't3': round(entry_t - atr * 1.5, 0),
                 }
             else:
                 hr_l = {
-                    'sl': round(price - atr * 1.5, 0),
-                    't1': round(price + atr5 * 0.75, 0),
-                    't2': round(price + atr * 0.75, 0),
-                    't3': round(price + atr * 1.5, 0),
+                    'sl': round(entry_t - atr * 1.5, 0),
+                    't1': round(entry_t + atr5 * 0.75, 0),
+                    't2': round(entry_t + atr * 0.75, 0),
+                    't3': round(entry_t + atr * 1.5, 0),
                 }
         else:
             ic = ATR_CONFIG['intraday']
@@ -648,26 +670,38 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         wr_info = f"{wr_badge}WR:{wr:.0f}%"
         # v38 P0-4: show ONE level set based on mode
         # v43: tight mode shows T1<T2<T3 (T1=ATR5, T2=ATR14, T3=ATR14 full)
+        # v44: market condition
+        cond = r.get('condition', '')
+        cond_icon = ''
+        if cond == 'BULL':        cond_icon = '📈BULL'
+        elif cond == 'BEAR':       cond_icon = '📉BEAR'
+        elif cond == 'BULL_PULLBACK': cond_icon = '📈BULL_PULL'
+        elif cond == 'BEAR_RALLY': cond_icon = '📉BEAR_RALLY'
+        elif cond == 'CHOPPY':     cond_icon = '⚠️CHOPPY'
+        elif cond == 'FLAT':       cond_icon = '➖FLAT'
+        else:                      cond_icon = f'🔄{cond}' if cond else ''
+
         def _fmt_tight(lvl, mode):
             if mode == 'swing' or lvl.get('t3') is None:
                 return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
             return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
 
+        prev = r.get('prev', r['price'])
         if sig == 'SELL':
             qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             if mode == 'swing':
-                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
-                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             if mode == 'swing':
-                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
-                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+                tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                 tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         if tags:
             tag_str = " ".join(tags)
@@ -726,6 +760,16 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         elif age_days >= 4: age_icon = ' ⚠️'
         wr_badge = _wr_badge(wr)
         wr_info = f"{wr_badge}WR:{wr:.0f}%"
+        # v44: market condition
+        cond = r.get('condition', '')
+        cond_icon = ''
+        if cond == 'BULL':        cond_icon = '📈BULL'
+        elif cond == 'BEAR':       cond_icon = '📉BEAR'
+        elif cond == 'BULL_PULLBACK': cond_icon = '📈BULL_PULL'
+        elif cond == 'BEAR_RALLY': cond_icon = '📉BEAR_RALLY'
+        elif cond == 'CHOPPY':     cond_icon = '⚠️CHOPPY'
+        elif cond == 'FLAT':       cond_icon = '➖FLAT'
+        else:                      cond_icon = f'🔄{cond}' if cond else ''
         mode = level_mode
         if sig == 'SELL':
             qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
@@ -735,7 +779,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                 if mode == 'swing' or lvl.get('t3') is None:
                     return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
                 return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
-            tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+            prev = r.get('prev', r['price'])
+            tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                      f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
@@ -745,7 +790,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                 if mode == 'swing' or lvl.get('t3') is None:
                     return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
                 return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
-            tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
+            prev = r.get('prev', r['price'])
+            tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                      f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         if tags:
             tline += " " + " ".join(tags)

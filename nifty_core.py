@@ -63,9 +63,11 @@ DEFAULT_STOCKS = GOOD_STOCKS
 ATR_CONFIG = {
     # INTRADAY: default trading view (daily candles)
     'intraday': {'sl': 3.0, 't1': 2.0, 't2': 3.5},
-    # INTRADAY_TIGHT: hourly-based tight levels for scalp/intraday
-    # T1=0.75×ATR (~0.5-0.7% in 1hr), T2=1.5×ATR (~1-1.5% in 2-3hr), SL=1.5×ATR
-    'intraday_tight': {'sl': 1.5, 't1': 0.75, 't2': 1.5},
+    'intraday_tight': {'sl': 1.5, 't1': 0.75, 't2': 0.75, 't3': 1.5},
+    # v43: T1< T2< T3 structure for tight mode
+    # T1 = entry + 0.75× ATR(5)   ← tightest (short-term)
+    # T2 = entry + 0.75× ATR(14)  ← medium   (current T1)
+    # T3 = entry + 1.5× ATR(14)   ← full     (current T2)
     # SWING: wider SL, wider targets for multi-day holds
     'swing':    {'sl': 1.5, 't1': 2.5, 't2': 4.0},  # v30: tighter SL/T1 = better WR & DD
     'period': 14,
@@ -254,6 +256,7 @@ def add_features(df):
         abs(df['Low'] - df['Close'].shift())
     ], axis=1).max(axis=1)
     df['atr'] = tr.rolling(14).mean()
+    df['atr5'] = tr.rolling(5).mean()  # v43: ATR(5) for tight T1
     df['vol_ma'] = df['Volume'].rolling(20).mean()
     df['vol_ratio'] = df['Volume'] / (df['vol_ma'] + 1)
     df['ret5'] = df['Close'].pct_change(5)

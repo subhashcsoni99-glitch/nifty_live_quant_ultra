@@ -227,10 +227,20 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 # ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
 # Override with --no-adx flag to disable
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
-def get_level_modes_extended(price, atr):
-    """Return all level sets for a stock."""
+def get_level_modes_extended(price, atr, atr5=None):
+    """Return all level sets for a stock.
+    v43: tight mode uses ATR(5) for T1, ATR(14) for T2/T3
+         T1 = entry + 0.75×ATR(5)   (tightest scalp)
+         T2 = entry + 0.75×ATR(14)  (medium)
+         T3 = entry + 1.5×ATR(14)   (full target)
+    """
+    if atr5 is None:
+        atr5 = atr  # fallback
+    tight_t1 = atr5 * 0.75
+    tight_t2 = atr * 0.75
+    tight_t3 = atr * 1.5
     return {
-        'tight':   calc_levels(price, atr, mode='intraday_tight'),
+        'tight':   {'sl': round(price - atr * 1.5, 2), 't1': round(price + tight_t1, 2), 't2': round(price + tight_t2, 2), 't3': round(price + tight_t3, 2)},
         'regular': calc_levels(price, atr, mode='intraday'),
         'swing':   calc_levels(price, atr, mode='swing'),
     }
@@ -253,13 +263,14 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     macd_sig = df['macd_sig'].iloc[-1]
     vol_ratio = df['vol_ratio'].iloc[-1]
     ret5 = df['ret5'].iloc[-1]
+    atr5 = float(df['atr5'].iloc[-1]) if 'atr5' in df.columns and not pd.isna(df['atr5'].iloc[-1]) else atr
     change_pct = ((price - prev) / prev * 100) if prev and prev > 0 else 0
 
     sig_val, meta, _ = core_get_signal(df, len(df) - 1, momentum_mode=momentum_mode)
     signal = meta['signal']
     divergence = meta.get('divergence')
 
-    levels = get_level_modes_extended(price, atr)
+    levels = get_level_modes_extended(price, atr, atr5=atr5)
     if _OPTION_C_ACTIVE:
         levels['swing'] = {'sl': round(price - atr * 0.75, 0), 't1': round(price + atr * 1.5, 0), 't2': round(price + atr * 2.5, 0)}
     sr = calc_support_resistance(df)
@@ -294,7 +305,7 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
         'symbol': sym, 'price': price, 'prev': prev,
         'rsi': round(rsi, 1), 'change': round(change_pct, 2),
         'signal': signal, 'prob': prob,
-        'sl_tight': levels['tight']['sl'], 't1_tight': levels['tight']['t1'], 't2_tight': levels['tight']['t2'],
+        'sl_tight': levels['tight']['sl'], 't1_tight': levels['tight']['t1'], 't2_tight': levels['tight']['t2'], 't3_tight': levels['tight']['t3'],
         'sl_intraday': levels['regular']['sl'], 't1_intraday': levels['regular']['t1'], 't2_intraday': levels['regular']['t2'],
         'sl_swing': levels['swing']['sl'], 't1_swing': levels['swing']['t1'], 't2_swing': levels['swing']['t2'],
         'support': sr['support'], 'resistance': sr['resistance'],
@@ -552,52 +563,58 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             sl_dist = price * 0.01   # fallback: 1% of price
         return max(1, int(10000 / sl_dist))
 
-    def fmt_levels_hr(r, sig):
+    def fmt_levels_hr(r, sig, tight=False, atr5=None):
         """Compute intraday + swing levels for display.
-        v36 Fix #1: intraday levels use daily ATR × ATR_CONFIG['intraday'] multipliers
-                   (was using hourly ATR — 4× smaller — making SL too tight)
-        v36 Fix #2a: per_hr based on daily ATR swing T1 distance / 24h
+        v43 Fix: T1<T2<T3 structure for tight mode:
+          BUY: T1 = entry + 0.75×ATR5, T2 = entry + 0.75×ATR14, T3 = entry + 1.5×ATR14
+          SELL: T1 = entry - 0.75×ATR5, T2 = entry - 0.75×ATR14, T3 = entry - 1.5×ATR14
         """
         h = r.get('hourly')
         price = r['price']
-        atr = r.get('atr', price * 0.02)   # daily ATR (fallback 2% of price)
+        atr = r.get('atr', price * 0.02)
+        if atr5 is None:
+            atr5 = atr
 
         if not h:
-            # Fallback to tight/intraday levels from stored values
-            tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight'); tk_t2=r.get('t2_tight')
-            id_sl=r.get('sl_intraday',tk_sl); id_t1=r.get('t1_intraday',tk_t1); id_t2=r.get('t2_intraday',tk_t2)
+            tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight')
+            tk_t2=r.get('t2_tight'); tk_t3=r.get('t3_tight')
+            id_sl=r.get('sl_intraday',tk_sl); id_t1=r.get('t1_intraday',tk_t1)
+            id_t2=r.get('t2_intraday',tk_t2); id_t3=None
             sw_sl=r.get('sl_swing'); sw_t1=r.get('t1_swing'); sw_t2=r.get('t2_swing')
             if sig == 'SELL':
-                return _round_lev(_inv(r['price'], id_sl, id_t1, id_t2)), _round_lev(_inv(r['price'], sw_sl, sw_t1, sw_t2)), atr
-            return {'sl': round(id_sl,1), 't1': round(id_t1,0), 't2': round(id_t2,0)}, {'sl': round(sw_sl,1), 't1': round(sw_t1,0), 't2': round(sw_t2,0)}, atr
+                return _round_lev(_inv(r['price'], id_sl, id_t1, id_t2)), _round_lev(_inv(r['price'], sw_sl, sw_t1, sw_t2)), atr, atr5
+            return {'sl':round(id_sl,1),'t1':round(id_t1,0),'t2':round(id_t2,0),'t3':round(tk_t3,0) if tk_t3 else None}, {'sl':round(sw_sl,1),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}, atr, atr5
 
-        # v36 Fix #1: use DAILY ATR × intraday multipliers (not hourly ATR)
-        # e.g. NIFTY ATR=₹200 → SL = price - 200×3.0 = realistic ₹600 risk (was ₹50 with hATR)
-        ic = ATR_CONFIG['intraday']
-        if sig == 'SELL':
-            hr_l = {
-                'sl': round(price + atr * ic['sl'], 0),
-                't1': round(price - atr * ic['t1'], 0),
-                't2': round(price - atr * ic['t2'], 0),
-            }
+        if tight:
+            if sig == 'SELL':
+                hr_l = {
+                    'sl': round(price + atr * 1.5, 0),
+                    't1': round(price - atr5 * 0.75, 0),
+                    't2': round(price - atr * 0.75, 0),
+                    't3': round(price - atr * 1.5, 0),
+                }
+            else:
+                hr_l = {
+                    'sl': round(price - atr * 1.5, 0),
+                    't1': round(price + atr5 * 0.75, 0),
+                    't2': round(price + atr * 0.75, 0),
+                    't3': round(price + atr * 1.5, 0),
+                }
         else:
-            hr_l = {
-                'sl': round(price - atr * ic['sl'], 0),
-                't1': round(price + atr * ic['t1'], 0),
-                't2': round(price + atr * ic['t2'], 0),
-            }
+            ic = ATR_CONFIG['intraday']
+            if sig == 'SELL':
+                hr_l = {'sl':round(price+atr*ic['sl'],0),'t1':round(price-atr*ic['t1'],0),'t2':round(price-atr*ic['t2'],0),'t3':None}
+            else:
+                hr_l = {'sl':round(price-atr*ic['sl'],0),'t1':round(price+atr*ic['t1'],0),'t2':round(price+atr*ic['t2'],0),'t3':None}
 
-        # v36 Fix #2a: per_hr from daily ATR swing T1 distance ÷ 24h (realistic ₹/hr)
-        swing_t1_dist = atr * ATR_CONFIG['swing']['t1']   # daily ATR × 2.5
-        per_hr = round(swing_t1_dist / 24, 1)            # e.g. ₹200×2.5/24 = ₹20.8/hr
-
-        # SWING levels
+        swing_t1_dist = atr * ATR_CONFIG['swing']['t1']
+        per_hr = round(swing_t1_dist / 24, 1)
         sw_sl=r.get('sl_swing'); sw_t1=r.get('t1_swing'); sw_t2=r.get('t2_swing')
         if sig == 'SELL':
             sw_l = _round_lev(_inv(r['price'], sw_sl, sw_t1, sw_t2))
         else:
-            sw_l = {'sl': round(sw_sl,1), 't1': round(sw_t1,0), 't2': round(sw_t2,0)}
-        return hr_l, sw_l, atr
+            sw_l = {'sl':round(sw_sl,1),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}
+        return hr_l, sw_l, atr, atr5
 
     def fmt_stock_short(r, show_mode=None):
         """Format a stock line with levels filtered by show_mode ('intraday'|'swing').
@@ -610,7 +627,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         tags = r.get('tags', [])
         confluence = r.get('_confluence', 0)
         rsi = r.get('rsi', 0)
-        hr_l, sw_l, atr_val = fmt_levels_hr(r, sig)
+        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'))
         price = r['price']
         mode = show_mode or level_mode
         age_days = r.get('signal_age_days', 0)
@@ -630,22 +647,28 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         elif age_days >= 4: age_icon = ' ⚠️'
         wr_info = f"{wr_badge}WR:{wr:.0f}%"
         # v38 P0-4: show ONE level set based on mode
+        # v43: tight mode shows T1<T2<T3 (T1=ATR5, T2=ATR14, T3=ATR14 full)
+        def _fmt_tight(lvl, mode):
+            if mode == 'swing' or lvl.get('t3') is None:
+                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
+            return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
+
         if sig == 'SELL':
             qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
+                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
+                tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     🎯 SL:{sw_l['sl']:.0f} T1:{sw_l['t1']:.0f} T2:{sw_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
+                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     💠 SL:{hr_l['sl']:.0f} T1:{hr_l['t1']:.0f} T2:{hr_l['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
+                tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         if tags:
             tag_str = " ".join(tags)
             tline += f" [{tag_str}]"
@@ -687,7 +710,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         tags = r.get('tags', [])
         confluence = r.get('_confluence', 0)
         rsi = r.get('rsi', 0)
-        hr_l, sw_l, atr_val = fmt_levels_hr(r, sig)
+        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'))
         price = r['price']
         age_days = r.get('signal_age_days', 0)
         # P0-1 Fix: swing-based position sizing (realistic 4-10%, not intraday 15-40%)
@@ -696,8 +719,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             swing_sl_dist = price * 0.01
         swing_qty_for_pos = max(1, int(10000 / swing_sl_dist))
         swing_pos_pct = round((swing_qty_for_pos * price) / 100000 * 100, 1)
-        pos_warn = None   # P0-1 fix: swing positions naturally 50-500% of capital (fixed-risk sizing).
-                          # HIGH_POS warning removed — qty_10k is correct; qty is what matters.
+        pos_warn = None
         pos_tag = ''
         age_icon = ''
         if age_days >= 8: age_icon = ' 💀'
@@ -709,14 +731,22 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
+            def _fmt(lvl, mode):
+                if mode == 'swing' or lvl.get('t3') is None:
+                    return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
+                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
             tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                     f"     {icon} SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
+                     f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
+            def _fmt(lvl, mode):
+                if mode == 'swing' or lvl.get('t3') is None:
+                    return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
+                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
             tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f} | RSI:{rsi:.0f} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                     f"     {icon} SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
+                     f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         if tags:
             tline += " " + " ".join(tags)
         return tline

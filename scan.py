@@ -227,12 +227,15 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 # ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
 # Override with --no-adx flag to disable
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
-def get_level_modes_extended(price, atr, atr5=None, entry_price=None):
+def get_level_modes_extended(price, atr, atr5=None, entry_price=None, signal=None):
     """Return all level sets for a stock.
     v43: tight mode uses ATR(5) for T1, ATR(14) for T2/T3
-         T1 = entry + 0.75×ATR(5)   (tightest scalp)
-         T2 = entry + 0.75×ATR(14)  (medium)
-         T3 = entry + 1.5×ATR(14)   (full target)
+         BUY:  T1 = entry + 0.75×ATR(5)   (tightest scalp)
+               T2 = entry + 0.75×ATR(14)  (medium)
+               T3 = entry + 1.5×ATR(14)   (full target)
+         SELL: T1 = entry - 0.75×ATR(5)
+               T2 = entry - 0.75×ATR(14)
+               T3 = entry - 1.5×ATR(14)
     v44: entry_price (prev_close) used as baseline, NOT current price
     """
     if atr5 is None:
@@ -241,8 +244,23 @@ def get_level_modes_extended(price, atr, atr5=None, entry_price=None):
     tight_t1 = atr5 * 0.75
     tight_t2 = atr * 0.75
     tight_t3 = atr * 1.5
+    if signal == 'SELL':
+        # v45: fix — SELL targets are BELOW entry (profit = buy back lower)
+        tight_levels = {
+            'sl': round(entry + atr * 1.5, 2),
+            't1': round(entry - tight_t1, 2),
+            't2': round(entry - tight_t2, 2),
+            't3': round(entry - tight_t3, 2),
+        }
+    else:
+        tight_levels = {
+            'sl': round(entry - atr * 1.5, 2),
+            't1': round(entry + tight_t1, 2),
+            't2': round(entry + tight_t2, 2),
+            't3': round(entry + tight_t3, 2),
+        }
     return {
-        'tight':   {'sl': round(entry - atr * 1.5, 2), 't1': round(entry + tight_t1, 2), 't2': round(entry + tight_t2, 2), 't3': round(entry + tight_t3, 2)},
+        'tight':   tight_levels,
         'regular': calc_levels(price, atr, mode='intraday'),
         'swing':   calc_levels(price, atr, mode='swing'),
     }
@@ -288,7 +306,7 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     signal = meta['signal']
     divergence = meta.get('divergence')
 
-    levels = get_level_modes_extended(price, atr, atr5=atr5, entry_price=prev)  # v44: use prev_close as entry
+    levels = get_level_modes_extended(price, atr, atr5=atr5, entry_price=prev, signal=signal)  # v44: use prev_close as entry | v45: pass signal for directional SELL targets
     if _OPTION_C_ACTIVE:
         levels['swing'] = {'sl': round(price - atr * 0.75, 0), 't1': round(price + atr * 1.5, 0), 't2': round(price + atr * 2.5, 0)}
     sr = calc_support_resistance(df)

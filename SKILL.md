@@ -1,4 +1,4 @@
-# NIFTY Live Quant Ultra — SKILL.md v45
+# NIFTY Live Quant Ultra — SKILL.md v46
 
 > Multi-mode quant trading system. Paper trading only. No live money.
 > Backtest: v14 (3yr, Jun 2023–May 2026, pinned) | 46 stocks | Score based on validated metrics

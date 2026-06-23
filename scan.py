@@ -742,9 +742,11 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         else:                      cond_icon = f'🔄{cond}' if cond else ''
 
         def _fmt_tight(lvl, mode):
-            if mode == 'swing' or lvl.get('t3') is None:
-                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
-            return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
+            # v50: T1=primary target(★), T2/T3=secondary
+            t1_str = f"T1:★{lvl['t1']:.0f}"
+            if lvl.get('t3') is None or mode == 'swing':
+                return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f}"
+            return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f} → T3:{lvl['t3']:.0f}"
 
         prev = r.get('prev', r['price'])
         if sig == 'SELL':
@@ -836,9 +838,10 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
             def _fmt(lvl, mode):
-                if mode == 'swing' or lvl.get('t3') is None:
-                    return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
-                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
+                t1_str = f"T1:★{lvl['t1']:.0f}"
+                if lvl.get('t3') is None or mode == 'swing':
+                    return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f}"
+                return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f} → T3:{lvl['t3']:.0f}"
             prev = r.get('prev', r['price'])
             tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                      f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
@@ -847,9 +850,10 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             lvl = sw_l if mode == 'swing' else hr_l
             icon = '💠' if mode != 'swing' else '🎯'
             def _fmt(lvl, mode):
-                if mode == 'swing' or lvl.get('t3') is None:
-                    return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f}"
-                return f"SL:{lvl['sl']:.0f} T1:{lvl['t1']:.0f} T2:{lvl['t2']:.0f} T3:{lvl['t3']:.0f}"
+                t1_str = f"T1:★{lvl['t1']:.0f}"
+                if lvl.get('t3') is None or mode == 'swing':
+                    return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f}"
+                return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f} → T3:{lvl['t3']:.0f}"
             prev = r.get('prev', r['price'])
             tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
                      f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")

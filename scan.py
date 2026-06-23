@@ -510,9 +510,16 @@ def parse_args():
     return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, _MAX_POS_PCT_OVERRIDE, stream_output
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
-def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing'):
+def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing', choppy=False):
     # NEW-1: suppress BUY/SELL signals when market is closed
     market_open, market_reason = _is_market_open()
+    # v49: choppy → show only T1 target (scalp), not T2/T3
+    # trending → show full T1/T2/T3 as designed
+    # sideways → show T1/T2, skip T3
+    # Override the display mode so nested fmt functions use the right level
+    if choppy:
+        level_mode = 'intraday_tight'   # choppy = scalp only (T1)
+    # else keep the user-specified level_mode (swing/tight/intraday)
     top = top_n if top_n else 3
     buy = [r for r in results if r['signal'] == 'BUY']
     sell = [r for r in results if r['signal'] == 'SELL']
@@ -632,7 +639,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             sl_dist = price * 0.01   # fallback: 1% of price
         return max(1, int(10000 / sl_dist))
 
-    def fmt_levels_hr(r, sig, tight=False, atr5=None):
+    def fmt_levels_hr(r, sig, tight=False, atr5=None, choppy=False):
         """Compute intraday + swing levels for display.
         v47: tight mode uses today_open as entry (not prev_close) for achievable targets.
         Stored tight levels (sl_tight/t1_tight/t2_tight) already have correct directional values.
@@ -645,7 +652,9 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             atr5 = r.get('atr5', atr)
 
         # Non-hourly path: use pre-stored tight/intraday/swing levels directly
-        if not h:
+        # v49: choppy → only T1, sideways → T1+T2, trending → T1+T2+T3
+        if choppy and hr_l.get('t3') is not None:
+            hr_l['t3'] = None
             tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight'); tk_t2=r.get('t2_tight'); tk_t3=r.get('t3_tight')
             sw_sl=r.get('sl_swing'); sw_t1=r.get('t1_swing'); sw_t2=r.get('t2_swing')
             if tight:
@@ -700,7 +709,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         tags = r.get('tags', [])
         confluence = r.get('_confluence', 0)
         rsi = r.get('rsi', 0)
-        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'))
+        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'), choppy=choppy)
         price = r['price']
         mode = show_mode or level_mode
         age_days = r.get('signal_age_days', 0)
@@ -795,7 +804,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         tags = r.get('tags', [])
         confluence = r.get('_confluence', 0)
         rsi = r.get('rsi', 0)
-        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'))
+        hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'), choppy=choppy)
         price = r['price']
         age_days = r.get('signal_age_days', 0)
         # P0-1 Fix: swing-based position sizing (realistic 4-10%, not intraday 15-40%)

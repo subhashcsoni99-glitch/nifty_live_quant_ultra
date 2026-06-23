@@ -547,11 +547,17 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
     except Exception:
         price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
+    # v48: CHOPPY detection — ADX<20 AND price within 1% of MA20 = no clear trend
+    near_ma = abs(price_now - ma20) / ma20 * 100 < 1.0 if ma20 > 0 else False
+    choppy = adx_val < 20 and near_ma
+
     # P1-2: Require ADX>20 to confirm BEARISH — avoids false BEARISH in choppy markets
-    if price_now < ma5 and price_now < ma20 and adx_val > 20:
+    if price_now < ma5 and price_now < ma20 and adx_val > 20 and not choppy:
         regime = "BEARISH"; regime_icon = "🔴"
-    elif price_now < ma5:
+    elif price_now < ma5 and not choppy:
         regime = "NEUTRAL"; regime_icon = "🟡"
+    elif choppy:
+        regime = "CHOPPY"; regime_icon = "🔶"
     else:
         regime = "BULLISH"; regime_icon = "🟢"
     breadth = f" ({adv}↑/{dec}↓)" if (adv + dec) > 0 else ""
@@ -572,6 +578,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
     conv_tag = f"📋 {conversation_label} | " if conversation_label else ""
     out = f"{conv_tag}🗓️ {today}\n"
     out += f"📊 Regime: {regime_icon}{regime}{breadth} | NIFTY50:{len(results)} {session_icon}\n"
+    if choppy:
+        out += f"🔶 CHOPPY MARKET — ADX:{adx_val:.0f}<20 + Price within 1% of MA20 → No clear trend, manage positions tightly\n"
     if not market_open:
         out += f"\n⚠️  POST-MARKET — signals shown for reference only. Not for live trading.\n"
     c2_total = long_c2 + short_c2
@@ -951,6 +959,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             out += line + "\n"
 
     out += "\n⚠️ Not SEBI registered. Validate before trading."
+    if choppy:
+        out += "\n🔶 CHOPPY MARKET — ADX:" + str(round(adx_val)) + " <20 + Price near MA20 → Avoid new positions. Close shorts on bounces, exits on breakdowns."
     return out
 
 # ─── JSON Format ────────────────────────────────────────────────────────────

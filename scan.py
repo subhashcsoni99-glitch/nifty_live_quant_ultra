@@ -227,42 +227,52 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 # ── v35: ADX filter ON by default (Option A = recommended) ─────────────────
 # Override with --no-adx flag to disable
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
-def get_level_modes_extended(price, atr, atr5=None, entry_price=None, signal=None):
+def get_level_modes_extended(price, atr, atr5=None, entry_price=None, signal=None, today_open=None):
     """Return all level sets for a stock.
-    v43: tight mode uses ATR(5) for T1, ATR(14) for T2/T3
-         BUY:  T1 = entry + 0.75×ATR(5)   (tightest scalp)
-               T2 = entry + 0.75×ATR(14)  (medium)
-               T3 = entry + 1.5×ATR(14)   (full target)
-         SELL: T1 = entry - 0.75×ATR(5)
-               T2 = entry - 0.75×ATR(14)
-               T3 = entry - 1.5×ATR(14)
-    v44: entry_price (prev_close) used as baseline, NOT current price
+    v47: today_open (today's actual open) used as entry for tight intraday targets.
+         This makes targets achievable when stock gaps at open.
+         prev_close still used for swing targets (multi-day horizon).
+    v43: tight mode: T1=ATR(5), T2/T3=ATR(14)
+    v45: BUY/SELL directional levels (targets below entry for SELL)
     """
     if atr5 is None:
         atr5 = atr  # fallback
-    entry = entry_price if entry_price is not None else price
+    # v47: use today_open as entry for tight intraday, prev_close for swing
+    # today_open makes targets achievable after gap-open
+    intra_entry = today_open if today_open is not None else (entry_price if entry_price is not None else price)
+    swing_entry = entry_price if entry_price is not None else price
     tight_t1 = atr5 * 0.75
     tight_t2 = atr * 0.75
     tight_t3 = atr * 1.5
     if signal == 'SELL':
         # v45: fix — SELL targets are BELOW entry (profit = buy back lower)
         tight_levels = {
-            'sl': round(entry + atr * 1.5, 2),
-            't1': round(entry - tight_t1, 2),
-            't2': round(entry - tight_t2, 2),
-            't3': round(entry - tight_t3, 2),
+            'sl': round(intra_entry + atr * 1.5, 2),
+            't1': round(intra_entry - tight_t1, 2),
+            't2': round(intra_entry - tight_t2, 2),
+            't3': round(intra_entry - tight_t3, 2),
+        }
+        swing_levels = {
+            'sl': round(swing_entry + atr * 1.5, 2),
+            't1': round(swing_entry - tight_t1, 2),
+            't2': round(swing_entry - tight_t2, 2),
         }
     else:
         tight_levels = {
-            'sl': round(entry - atr * 1.5, 2),
-            't1': round(entry + tight_t1, 2),
-            't2': round(entry + tight_t2, 2),
-            't3': round(entry + tight_t3, 2),
+            'sl': round(intra_entry - atr * 1.5, 2),
+            't1': round(intra_entry + tight_t1, 2),
+            't2': round(intra_entry + tight_t2, 2),
+            't3': round(intra_entry + tight_t3, 2),
+        }
+        swing_levels = {
+            'sl': round(swing_entry - atr * 1.5, 2),
+            't1': round(swing_entry + tight_t1, 2),
+            't2': round(swing_entry + tight_t2, 2),
         }
     return {
         'tight':   tight_levels,
         'regular': calc_levels(price, atr, mode='intraday'),
-        'swing':   calc_levels(price, atr, mode='swing'),
+        'swing':   swing_levels,
     }
 
 # ─── Analyze Single Stock ──────────────────────────────────────────────────
@@ -271,6 +281,16 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     df = get_ohlc(sym)
     if df is None or price is None or len(df) < 200:
         return None
+
+    # v47: fetch today's open to use as intraday entry (not stale prev_close)
+    today_open = None
+    try:
+        # get_ohlc() is daily timeframe — today row has the actual day open
+        df_today = df[df.index.date == pd.Timestamp('today').date()]
+        if len(df_today) >= 1:
+            today_open = float(df_today['Open'].iloc[0])
+    except Exception:
+        today_open = None
 
     df = add_features(df)
     pv = df['Close'].iloc[-1]
@@ -306,7 +326,9 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     signal = meta['signal']
     divergence = meta.get('divergence')
 
-    levels = get_level_modes_extended(price, atr, atr5=atr5, entry_price=prev, signal=signal)  # v44: use prev_close as entry | v45: pass signal for directional SELL targets
+    # v44: prev_close used as baseline | v47: today_open used for tight intraday targets (gap-aware entry)
+    # v45: pass signal for directional SELL targets | v47: pass today_open for live intraday entry
+    levels = get_level_modes_extended(price, atr, atr5=atr5, entry_price=prev, signal=signal, today_open=today_open)
     if _OPTION_C_ACTIVE:
         levels['swing'] = {'sl': round(price - atr * 0.75, 0), 't1': round(price + atr * 1.5, 0), 't2': round(price + atr * 2.5, 0)}
     sr = calc_support_resistance(df)
@@ -349,10 +371,11 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
         'support': sr['support'], 'resistance': sr['resistance'],
         'buy_cnt': meta['buy_cnt'], 'sell_cnt': meta['sell_cnt'],
         'divergence': divergence, 'reasons': reasons,
-        'atr': round(atr, 2), 'vol_ratio': round(vol_ratio, 2), 'ret5': round(ret5 * 100, 2),
+        'atr': round(atr, 2), 'atr5': round(atr5, 2), 'vol_ratio': round(vol_ratio, 2), 'ret5': round(ret5 * 100, 2),
         'pos_size': pos['shares'], 'pos_value': pos['position_value'], 'pos_pct': pos_pct,
         'ai': ai, 'ml': ml, 'hourly': hourly, 'tags': [],
         '_stats': stats,
+        'today_open': today_open,   # v47: today's open for gap-aware intraday targets
         'signal_age_days': round(signal_age_days, 1) if signal_age_days else 0.0,
         'warnings': ['BEARISH_DIVERGENCE'] if divergence == 'BEARISH' else [],
         'primary_trigger': _get_primary_trigger(meta, rsi, divergence, signal),
@@ -603,8 +626,8 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
 
     def fmt_levels_hr(r, sig, tight=False, atr5=None):
         """Compute intraday + swing levels for display.
-        v44: tight mode uses r['prev'] (prev_close) as entry, NOT current price.
-        This ensures T1/T2/T3 are anchored to day baseline, not live price.
+        v47: tight mode uses today_open as entry (not prev_close) for achievable targets.
+        Stored tight levels (sl_tight/t1_tight/t2_tight) already have correct directional values.
         """
         h = r.get('hourly')
         price = r['price']
@@ -613,19 +636,24 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         if atr5 is None:
             atr5 = r.get('atr5', atr)
 
+        # Non-hourly path: use pre-stored tight/intraday/swing levels directly
         if not h:
-            tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight')
-            tk_t2=r.get('t2_tight'); tk_t3=r.get('t3_tight')
-            id_sl=r.get('sl_intraday',tk_sl); id_t1=r.get('t1_intraday',tk_t1)
-            id_t2=r.get('t2_intraday',tk_t2); id_t3=None
+            tk_sl=r.get('sl_tight'); tk_t1=r.get('t1_tight'); tk_t2=r.get('t2_tight'); tk_t3=r.get('t3_tight')
             sw_sl=r.get('sl_swing'); sw_t1=r.get('t1_swing'); sw_t2=r.get('t2_swing')
-            if sig == 'SELL':
-                return _round_lev(_inv(r['price'], id_sl, id_t1, id_t2)), _round_lev(_inv(r['price'], sw_sl, sw_t1, sw_t2)), atr, atr5
-            return {'sl':round(id_sl,1),'t1':round(id_t1,0),'t2':round(id_t2,0),'t3':round(tk_t3,0) if tk_t3 else None}, {'sl':round(sw_sl,1),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}, atr, atr5
+            if tight:
+                # tight mode: use stored tight levels (directional from get_level_modes_extended)
+                hr_l = {'sl':round(tk_sl,0),'t1':round(tk_t1,0),'t2':round(tk_t2,0),'t3':round(tk_t3,0) if tk_t3 else None}
+            else:
+                # regular intraday: use stored intraday levels
+                id_sl=r.get('sl_intraday',tk_sl); id_t1=r.get('t1_intraday',tk_t1); id_t2=r.get('t2_intraday',tk_t2)
+                hr_l = {'sl':round(id_sl,0),'t1':round(id_t1,0),'t2':round(id_t2,0),'t3':None}
+            sw_l = {'sl':round(sw_sl,0),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}
+            return hr_l, sw_l, atr, atr5
 
+        # Hourly path: compute dynamically from entry
         if tight:
-            # v44: use prev_close as entry
-            entry_t = prev
+            # v47: use today_open as entry (gap-aware, achievable targets)
+            entry_t = r.get('today_open', prev)
             if sig == 'SELL':
                 hr_l = {
                     'sl': round(entry_t + atr * 1.5, 0),
@@ -647,14 +675,11 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             else:
                 hr_l = {'sl':round(price-atr*ic['sl'],0),'t1':round(price+atr*ic['t1'],0),'t2':round(price+atr*ic['t2'],0),'t3':None}
 
-        swing_t1_dist = atr * ATR_CONFIG['swing']['t1']
-        per_hr = round(swing_t1_dist / 24, 1)
+        # Swing levels always from stored values (prev_close anchored, multi-day)
         sw_sl=r.get('sl_swing'); sw_t1=r.get('t1_swing'); sw_t2=r.get('t2_swing')
-        if sig == 'SELL':
-            sw_l = _round_lev(_inv(r['price'], sw_sl, sw_t1, sw_t2))
-        else:
-            sw_l = {'sl':round(sw_sl,1),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}
+        sw_l = {'sl':round(sw_sl,0),'t1':round(sw_t1,0),'t2':round(sw_t2,0)}
         return hr_l, sw_l, atr, atr5
+
 
     def fmt_stock_short(r, show_mode=None):
         """Format a stock line with levels filtered by show_mode ('intraday'|'swing').

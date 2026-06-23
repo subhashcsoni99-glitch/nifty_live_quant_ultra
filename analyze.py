@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Analyzer v6
+NIFTY Live Quant Ultra - Analyzer v44
 Dual Analysis: Rule-Based + ML Prediction (LLM-ready output)
 """
 import sys

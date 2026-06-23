@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Core Module v3
+NIFTY Live Quant Ultra - Core Module v44
 Single source of truth for: OHLC fetching, feature engineering, signal logic,
 ATR levels, 9-stage AI pipeline, S/R, fundamental scoring.
 All scripts import from here. ONE SOURCE OF TRUTH.

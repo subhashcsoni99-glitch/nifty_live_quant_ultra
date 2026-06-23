@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Scanner v25 - Unified Rule-Based + AI (9-stage) + ML
+NIFTY Scanner v44 - Unified Rule-Based + AI (9-stage) + ML
 
 v25 UPGRADE (achieving 9.5/10 rating):
   1. WR badge: 🟢 >50% | 🟡 40-50% | 🔴 <40% on every stock line

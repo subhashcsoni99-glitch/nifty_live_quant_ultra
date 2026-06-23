@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Backtest v14
+NIFTY Live Quant Ultra - Backtest v44
 v10→v11 changes:
   1. PRIMARY metric = realized_return (P&L / capital_at_risk), NOT compounded
   2. peak_realized tracks settled cash only (updated only on exits)

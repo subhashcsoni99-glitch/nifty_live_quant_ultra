@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Scanner v44 - Unified Rule-Based + AI (9-stage) + ML
+NIFTY Scanner v45 - Unified Rule-Based + AI (9-stage) + ML
 
 v25 UPGRADE (achieving 9.5/10 rating):
   1. WR badge: 🟢 >50% | 🟡 40-50% | 🔴 <40% on every stock line
@@ -295,8 +295,8 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     pos = calc_position_size(100000, price, atr * ATR_CONFIG[level_mode]['sl'])
     pos_pct = round((pos['position_value'] / 100000) * 100, 1)
 
-    prob_buy = min(95, 50 + meta['buy_cnt'] * 8)
-    prob_sell = min(95, 50 + meta['sell_cnt'] * 8)
+    prob_buy  = min(95, 45 + meta['buy_cnt']  * 10)   # v44: wider spread, base 45→85% at cnt=4, 95% at cnt=5
+    prob_sell = min(95, 45 + meta['sell_cnt'] * 10)
     prob = prob_buy if signal == 'BUY' else (prob_sell if signal == 'SELL' else max(prob_buy, prob_sell))
     reasons = meta.get('reasons', [])
 

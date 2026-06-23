@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Core Module v44
+NIFTY Live Quant Ultra - Core Module v45
 Single source of truth for: OHLC fetching, feature engineering, signal logic,
 ATR levels, 9-stage AI pipeline, S/R, fundamental scoring.
 All scripts import from here. ONE SOURCE OF TRUTH.
@@ -478,12 +478,15 @@ def get_signal(df, i, momentum_mode=False):
 
     buy_cnt  = sum([c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_macd, c_vol, c_mom])
     sell_cnt = sum([not c_price_ma20, not c_price_ma50, not c_ma50_ma200, c_rsi_sell, not c_macd, c_vol, not c_mom])
+    # v44 FIX: scale bonus with RSI extremity (more extreme = higher cnt)
+    rsi_extremity_buy  = max(0, int((RSI_CONFIG['buy_strict']  - rsi) / 5))   # RSI<30: 25→0, 20→2, 15→3, 10→4
+    rsi_extremity_sell = max(0, int((rsi - RSI_CONFIG['sell_strict']) / 5))  # RSI>60: 65→1, 70→2, 75→3, 80→4
     if c_rsi_buy and (c_ma5_above_ma20 or c_ret5_positive):
-        buy_cnt += 1
+        buy_cnt += 1 + rsi_extremity_buy   # was flat +1
     if c_rsi_sell and not c_price_ma20:
-        sell_cnt += 1
+        sell_cnt += 1 + rsi_extremity_sell  # was flat +1
     if c_rsi_bear:
-        sell_cnt += 2   # v36 P1-C: RSI>70 adds 2 pts → independent short signal
+        sell_cnt += 2 + rsi_extremity_sell   # was flat +2
 
     divergence = detect_divergence(df.iloc[:i+1])
     if divergence == "BULLISH":
@@ -495,11 +498,14 @@ def get_signal(df, i, momentum_mode=False):
     elif rsi < RSI_CONFIG['buy_strict'] and c_price_ma20:
         sell_cnt = 0
 
-    # v37 P0-4: Independent RSI>70 SHORT — fires BEFORE RSI>65 BUY block
+    # v37 P0-4 + v44 FIX: Independent RSI>70 SHORT — fires BEFORE RSI>65 BUY block
     # RSI>70 = extreme overbought = direct SHORT regardless of ADX/MA alignment
     # ADX filter BYPASSED for RSI>70 — extreme overbought overrides trend
+    # v44 FIX: sell_cnt scales with RSI extremity (71→4, 76→5, 81→6, 86→7, 91→8+)
     if rsi > MOMENTUM_CONFIG['rsi_overbought']:
-        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': 4,
+        rsi_extremity = max(0, int((rsi - MOMENTUM_CONFIG['rsi_overbought']) / 5))
+        sell_cnt_dynamic = 4 + rsi_extremity
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': sell_cnt_dynamic,
                     'divergence': divergence,
                     'reasons': [f"🎯 RSI={rsi:.0f}>70 (extreme overbought — direct SHORT)",
                                  f"ADX={adx:.0f} (trend={'✅' if adx_trending else '❌'})"],

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Scanner v45 - Unified Rule-Based + AI (9-stage) + ML
+NIFTY Scanner v50 - Unified Rule-Based + AI (9-stage) + ML
 
 v25 UPGRADE (achieving 9.5/10 rating):
   1. WR badge: 🟢 >50% | 🟡 40-50% | 🔴 <40% on every stock line
@@ -229,45 +229,47 @@ _POS_SIZE_WARNING_PCT = 10  # warn if position > 10% of capital
 _DEFAULT_ADX_ENABLED = True  # v35: ADX>25 enabled by default
 def get_level_modes_extended(price, atr, atr5=None, entry_price=None, signal=None, today_open=None):
     """Return all level sets for a stock.
-    v47: today_open (today's actual open) used as entry for tight intraday targets.
-         This makes targets achievable when stock gaps at open.
-         prev_close still used for swing targets (multi-day horizon).
+    v49 FIX: Targets use CURRENT PRICE as entry (not today's open) so they're always achievable.
+             Today's open only used for regime detection, not target calculation.
+    v47: today_open was used as entry for tight intraday targets — but this caused targets
+         to be below current price when stock had already moved up from open (impossible targets).
+         FIX: use current `price` as intraday entry so T1/T2 are always reachable from now.
     v43: tight mode: T1=ATR(5), T2/T3=ATR(14)
     v45: BUY/SELL directional levels (targets below entry for SELL)
     """
     if atr5 is None:
         atr5 = atr  # fallback
-    # v47: use today_open as entry for tight intraday, prev_close for swing
-    # today_open makes targets achievable after gap-open
-    intra_entry = today_open if today_open is not None else (entry_price if entry_price is not None else price)
+    # v49 FIX: use current price as intraday entry (always reachable)
+    # v50 FIX: T1=0.5×ATR5 (tight scalp), T2=1.0×ATR14 (moderate), T3=1.5×ATR14 (full)
+    # v43: tight mode: T1=ATR(5), T2/T3=ATR(14) — now with different multipliers
+    intra_entry = price
     swing_entry = entry_price if entry_price is not None else price
-    tight_t1 = atr5 * 0.75
-    tight_t2 = atr * 0.75
-    tight_t3 = atr * 1.5
+    scalp_t1 = atr5 * 0.5    # v50: T1 very tight — half ATR(5)
+    scalp_t2 = atr * 1.0     # v50: T2 moderate — full ATR(14)
+    scalp_t3 = atr * 1.5     # v50: T3 full — 1.5× ATR(14)
     if signal == 'SELL':
-        # v45: fix — SELL targets are BELOW entry (profit = buy back lower)
         tight_levels = {
             'sl': round(intra_entry + atr * 1.5, 2),
-            't1': round(intra_entry - tight_t1, 2),
-            't2': round(intra_entry - tight_t2, 2),
-            't3': round(intra_entry - tight_t3, 2),
+            't1': round(intra_entry - scalp_t1, 2),    # v50: 0.5×ATR5 — tightest target
+            't2': round(intra_entry - scalp_t2, 2),    # v50: 1.0×ATR14 — moderate target
+            't3': round(intra_entry - scalp_t3, 2),    # v50: 1.5×ATR14 — full target
         }
         swing_levels = {
             'sl': round(swing_entry + atr * 1.5, 2),
-            't1': round(swing_entry - tight_t1, 2),
-            't2': round(swing_entry - tight_t2, 2),
+            't1': round(swing_entry - scalp_t1, 2),
+            't2': round(swing_entry - scalp_t2, 2),
         }
     else:
         tight_levels = {
             'sl': round(intra_entry - atr * 1.5, 2),
-            't1': round(intra_entry + tight_t1, 2),
-            't2': round(intra_entry + tight_t2, 2),
-            't3': round(intra_entry + tight_t3, 2),
+            't1': round(intra_entry + scalp_t1, 2),    # v50: 0.5×ATR5 — tight scalp
+            't2': round(intra_entry + scalp_t2, 2),    # v50: 1.0×ATR14 — moderate
+            't3': round(intra_entry + scalp_t3, 2),    # v50: 1.5×ATR14 — full
         }
         swing_levels = {
             'sl': round(swing_entry - atr * 1.5, 2),
-            't1': round(swing_entry + tight_t1, 2),
-            't2': round(swing_entry + tight_t2, 2),
+            't1': round(swing_entry + scalp_t1, 2),
+            't2': round(swing_entry + scalp_t2, 2),
         }
     return {
         'tight':   tight_levels,
@@ -527,46 +529,66 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
 
     # v34: 4-tier Index Regime (NIFTY50 MA-based) + A/D breadth + trading hours
     # P1-2 Fix: use ADX to confirm BEARISH — price below MA5+MA20 AND ADX>20 required
+    # v49 FIX: Regime uses TODAY'S OPEN as intraday baseline (not MA20/MA50)
+    # Also count stocks from YESTERDAY CLOSE (not today's open)
     try:
         import yfinance as yf
         idx = yf.Ticker("^NSEI")
         df_i = idx.history(period="5d", interval="1d")
         if len(df_i) >= 2:
-            price_now = df_i["Close"].iloc[-1]
-            price_prev = df_i["Close"].iloc[-2]
-            ma5 = df_i["Close"].tail(5).mean()
-            ma20 = df_i["Close"].tail(20).mean() if len(df_i) >= 20 else df_i["Close"].mean()
-            # P1-2: fetch ADX from NIFTY daily data to confirm trend
+            price_now = float(df_i["Close"].iloc[-1])
+            price_prev = float(df_i["Close"].iloc[-2])
+            ma5 = float(df_i["Close"].tail(5).mean())
+            ma20 = float(df_i["Close"].tail(20).mean()) if len(df_i) >= 20 else float(df_i["Close"].mean())
+            # v49: Get today's open from intraday data for regime baseline
+            idx_intra = yf.Ticker("^NSEI")
+            df_intra = idx_intra.history(period="5d", interval="5m")
+            today_start = pd.Timestamp.now().normalize()  # today's midnight UTC
+            df_today_intra = df_intra[df_intra.index >= today_start]
+            if len(df_today_intra) > 0:
+                today_open = float(df_today_intra["Open"].iloc[0])
+            else:
+                today_open = float(df_i["Open"].iloc[-1])  # fallback to daily open
+            yest_close = price_prev  # yesterday's close
             nifty_df = add_features(df_i)
             adx_val = float(nifty_df['adx'].iloc[-1]) if 'adx' in nifty_df.columns and not pd.isna(nifty_df['adx'].iloc[-1]) else 25
-            from nifty_core import NIFTY50_STOCKS
+            # v49: Count stocks from YESTERDAY CLOSE (correct for intraday)
             adv, dec = 0, 0
             for sym in NIFTY50_STOCKS:
                 try:
                     t = yf.Ticker(sym + ".NS")
                     h = t.history(period="2d", interval="1d")
                     if len(h) >= 2:
-                        chg = h["Close"].iloc[-1] - h["Open"].iloc[-2]
+                        # Count from yesterday's close
+                        chg = float(h["Close"].iloc[-1]) - float(h["Close"].iloc[-2])
                         if chg > 0: adv += 1
                         elif chg < 0: dec += 1
                 except: pass
         else:
-            price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
+            price_now, ma5, ma20, adx_val, today_open, yest_close, adv, dec = 23999, 24000, 23600, 25, 23999, 23850, 0, 0
     except Exception:
-        price_now, ma5, ma20, adx_val = 23999, 24000, 23600, 25
-    # v48: CHOPPY detection — ADX<20 AND price within 1% of MA20 = no clear trend
+        price_now, ma5, ma20, adx_val, today_open, yest_close, adv, dec = 23999, 24000, 23600, 25, 23999, 23850, 0, 0
+    # v49 INTRADAY REGIME: use today's open as primary baseline
+    intraday_chg = price_now - today_open
+    intraday_pct = (intraday_chg / today_open * 100) if today_open > 0 else 0
+    # Secondary: from yesterday close
+    from_yest = price_now - yest_close
+    from_yest_pct = (from_yest / yest_close * 100) if yest_close > 0 else 0
     near_ma = abs(price_now - ma20) / ma20 * 100 < 1.0 if ma20 > 0 else False
     choppy = adx_val < 20 and near_ma
-
-    # P1-2: Require ADX>20 to confirm BEARISH — avoids false BEARISH in choppy markets
-    if price_now < ma5 and price_now < ma20 and adx_val > 20 and not choppy:
-        regime = "BEARISH"; regime_icon = "🔴"
-    elif price_now < ma5 and not choppy:
-        regime = "NEUTRAL"; regime_icon = "🟡"
-    elif choppy:
+    # v49: 5-tier intraday regime based on actual price movement
+    if choppy:
         regime = "CHOPPY"; regime_icon = "🔶"
-    else:
+    elif intraday_pct >= 0.5:
         regime = "BULLISH"; regime_icon = "🟢"
+    elif intraday_pct <= -0.5:
+        regime = "BEARISH"; regime_icon = "🔴"
+    elif intraday_pct >= 0.2:
+        regime = "SLIGHTLY_BULLISH"; regime_icon = "🟢"
+    elif intraday_pct <= -0.2:
+        regime = "SLIGHTLY_BEARISH"; regime_icon = "🔴"
+    else:
+        regime = "NEUTRAL"; regime_icon = "⚪"
     breadth = f" ({adv}↑/{dec}↓)" if (adv + dec) > 0 else ""
     bullish_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BULLISH')
     bear_count = sum(1 for r in results if (r.get('ai') or {}).get('outlook') == 'BEARISH')
@@ -584,7 +606,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
 
     conv_tag = f"📋 {conversation_label} | " if conversation_label else ""
     out = f"{conv_tag}🗓️ {today}\n"
-    out += f"📊 Regime: {regime_icon}{regime}{breadth} | NIFTY50:{len(results)} {session_icon}\n"
+    out += f"📊 Regime: {regime_icon}{regime}{breadth} | NIFTY {price_now:.0f}({intraday_chg:+.0f},{intraday_pct:+.2f}%) | NIFTY50:{len(results)} {session_icon}\n"
     if choppy:
         out += f"🔶 CHOPPY MARKET — ADX:{adx_val:.0f}<20 + Price within 1% of MA20 → No clear trend, manage positions tightly\n"
     if not market_open:
@@ -668,21 +690,21 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             return hr_l, sw_l, atr, atr5
 
         # Hourly path: compute dynamically from entry
+        # v49 FIX: use current price as entry (not today_open) so targets are always reachable
         if tight:
-            # v47: use today_open as entry (gap-aware, achievable targets)
-            entry_t = r.get('today_open', prev)
+            entry_t = price  # v49: was today_open — caused impossible targets
             if sig == 'SELL':
                 hr_l = {
                     'sl': round(entry_t + atr * 1.5, 0),
-                    't1': round(entry_t - atr5 * 0.75, 0),
-                    't2': round(entry_t - atr * 0.75, 0),
+                    't1': round(entry_t - atr5 * 0.5, 0),   # v50: 0.5×ATR5 tight scalp
+                    't2': round(entry_t - atr * 1.0, 0),
                     't3': round(entry_t - atr * 1.5, 0),
                 }
             else:
                 hr_l = {
                     'sl': round(entry_t - atr * 1.5, 0),
-                    't1': round(entry_t + atr5 * 0.75, 0),
-                    't2': round(entry_t + atr * 0.75, 0),
+                    't1': round(entry_t + atr5 * 0.5, 0),   # v50: 0.5×ATR5 tight scalp
+                    't2': round(entry_t + atr * 1.0, 0),
                     't3': round(entry_t + atr * 1.5, 0),
                 }
         else:
@@ -1184,10 +1206,10 @@ def main():
     if top_n: tags.append(f"--top{top_n}")
     tag = f" ({', '.join(tags)})" if tags else ""
     print(f"📊 NIFTY SCANNER v22{tag} | {today}")
+    model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
     # ── ML coverage + backtest freshness warnings ───────────────────────
     if use_ai:
         import os as _os
-        model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
         models = [f for f in _os.listdir(model_dir) if f.endswith('_model.joblib')]
         total = len(stocks)
         covered = sum(1 for r in results if not r.get('ml', {}).get('_ml_fail_reason') == 'NO_MODEL')

@@ -525,13 +525,13 @@ def _categorize(results, regime='BULLISH'):
             continue   # skip — ML contradicts SHORT
         if not is_short:
             continue   # TOP_SHORT only for SELL signals
-        # TOP_SHORT criteria (v52): WR>=60% + CF>=7.8 + AI_Conf>=90 (HIGH)
+        # TOP_SHORT criteria (v52): WR>=55% + CF>=7.4 + AI_Conf>=60 (MEDIUM/HIGH)
         ai_conf = _ai_conf_num(r)
-        if rr > 0 and cf >= 7.8 and wr >= 60 and ai_conf >= 90:
+        if cf >= 7.4 and wr >= 55 and ai_conf >= 60:
             r['_starred'] = True
             _add_tag(r, '🔻 TOP_SHORT')
 
-    # TOP_PICK selection (v52): WR>65% + CF>7.8 + AI_Conf>=90 (HIGH) — check all quality cats
+    # TOP_PICK selection (v52): WR>=55% + CF>=7.4 + AI_Conf>=90 (HIGH) — check all quality cats
     for r in cat_a + cat_b + cat_c1:
         stats = r.get('_stats', {})
         rr = stats.get('realized_return', 0)
@@ -543,7 +543,7 @@ def _categorize(results, regime='BULLISH'):
         # Skip ML_DOWN stocks
         if ml_dir == 'DOWN':
             continue
-        if wr >= 60 and cf >= 7.8 and ai_conf >= 90:
+        if wr >= 55 and cf >= 7.4 and ai_conf >= 90:
             r['_starred'] = True
             _add_tag(r, '⭐ TOP_PICK')
 

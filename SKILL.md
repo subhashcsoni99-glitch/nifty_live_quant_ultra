@@ -16,10 +16,10 @@
 | v42 | 9.5/10 | Cat C2a/C2b split, backtest session cap, WR 40%→38%, v14 pinned |
 | v43–v49 | 9.5/10 | Sharpe gate, MAX_POSITION=5%, regime-aware targets, T1/T2/T3 multi-target |
 | **v51** | **9.5/10** | **WR>=75% gate, P0-2/3/4 fixes** |
-| **v52** | **9.5/10** | **HIGH_CONVICTION mode: BB%+StochRSI+Vol+MACD → 55% WR gate** |
+| **v52** | **9.5/10** | **HC mode: ⭐ TOP_PICK = WR>=60%+CF>=7.8+AI_Conf>=90% (Cat A/B/C1)** |
+| | | **HC mode: 🔻 TOP_SHORT = WR>=60%+CF>=7.8+AI_Conf>=90%+RR>0 (Cat A/A-/B/C1)** |
 | | | **P0-3: DD gate 55%→30%** |
 | | | **P0-4: removed stale qualified list from docs (now live-only)** |
-| | | **SKILL.md v51: full rewrite with honest qualified stock sourcing** |
 
 ---
 

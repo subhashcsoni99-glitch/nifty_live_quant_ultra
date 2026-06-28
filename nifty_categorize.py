@@ -506,6 +506,13 @@ def _categorize(results, regime='BULLISH'):
     _SHORT_QUALIFIED_COUNT = len(short_qualified)
 
     # ── TOP_SHORT selection (C1 fix) — now reads Cat C1 too ──
+    # AI confidence string->number: HIGH=90, MEDIUM=60, LOW=30
+    def _ai_conf_num(r):
+        conf = (r.get('ai') or {}).get('confidence', 0)
+        if isinstance(conf, str):
+            return {'HIGH': 90, 'MEDIUM': 60, 'LOW': 30, 'NONE': 0}.get(conf, 0)
+        return float(conf) if conf else 0.0
+
     for r in cat_a + cat_a_minus + cat_b + cat_c1:
         stats = r.get('_stats', {})
         rr = stats.get('realized_return', 0)
@@ -513,28 +520,30 @@ def _categorize(results, regime='BULLISH'):
         cf = r.get('_confluence', 0)
         ml = r.get('ml') or {}
         ml_dir = ml.get('direction', '')
-        rsi = r.get('rsi', 0)
         is_short = r['signal'] == 'SELL'
         if ml_dir == 'UP':
             continue   # skip — ML contradicts SHORT
         if not is_short:
             continue   # TOP_SHORT only for SELL signals
-        # TOP_SHORT criteria: positive RR + high CF + adequate WR + trending
-        if rr > 0 and cf >= 7.0 and wr >= 38:
+        # TOP_SHORT criteria (v52): WR>=60% + CF>=7.8 + AI_Conf>=90 (HIGH)
+        ai_conf = _ai_conf_num(r)
+        if rr > 0 and cf >= 7.8 and wr >= 60 and ai_conf >= 90:
             r['_starred'] = True
             _add_tag(r, '🔻 TOP_SHORT')
 
-    # TOP_PICK selection
-    for r in cat_a + cat_b:
+    # TOP_PICK selection (v52): WR>65% + CF>7.8 + AI_Conf>=90 (HIGH) — check all quality cats
+    for r in cat_a + cat_b + cat_c1:
         stats = r.get('_stats', {})
         rr = stats.get('realized_return', 0)
         wr = stats.get('win_rate', 0)
         cf = r.get('_confluence', 0)
+        ai_conf = _ai_conf_num(r)
         ml = r.get('ml') or {}
         ml_dir = ml.get('direction', '')
+        # Skip ML_DOWN stocks
         if ml_dir == 'DOWN':
             continue
-        if rr > 0 and cf >= 8.0 and wr >= _MIN_WR_TOP_PICK:
+        if wr >= 60 and cf >= 7.8 and ai_conf >= 90:
             r['_starred'] = True
             _add_tag(r, '⭐ TOP_PICK')
 

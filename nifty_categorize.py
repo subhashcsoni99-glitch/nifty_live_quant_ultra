@@ -527,7 +527,7 @@ def _categorize(results, regime='BULLISH'):
             continue   # TOP_SHORT only for SELL signals
         # TOP_SHORT criteria (v52): WR>=55% + CF>=7.4 + AI_Conf>=60 (MEDIUM/HIGH)
         ai_conf = _ai_conf_num(r)
-        if cf >= 7.4 and wr >= 55 and ai_conf >= 60:
+        if cf >= 7.9 and wr >= 55 and ai_conf >= 90:
             r['_starred'] = True
             _add_tag(r, '🔻 TOP_SHORT')
 
@@ -543,7 +543,7 @@ def _categorize(results, regime='BULLISH'):
         # Skip ML_DOWN stocks
         if ml_dir == 'DOWN':
             continue
-        if wr >= 55 and cf >= 7.4 and ai_conf >= 90:
+        if wr >= 55 and cf >= 7.9 and ai_conf >= 90:
             r['_starred'] = True
             _add_tag(r, '⭐ TOP_PICK')
 

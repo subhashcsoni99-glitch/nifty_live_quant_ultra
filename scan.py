@@ -905,7 +905,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         for r in top_buys:
             out += fmt_top_pick(r, 'BUY') + "\n\n"
     else:
-        out += f"🏆⭐ TOP BUYS  [0]: no BUY signals meet ⭐ criteria (WR>=55%+CF>=7.4+AI_Conf>=90%)\n"
+        out += f"🏆⭐ TOP BUYS  [0]: no BUY signals meet ⭐ criteria (WR>=55%+CF>=7.9+AI_Conf>=90%)\n"
 
     if top_shorts:
         g = sum(1 for r in top_shorts if r.get('_stats', {}).get('win_rate', 0) >= 50)
@@ -915,7 +915,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         for r in top_shorts:
             out += fmt_top_pick(r, 'SELL') + "\n\n"
     else:
-        out += f"🏆⭐ TOP SHORTS [0]: no SELL signals meet ⭐ criteria (WR>=55%+CF>=7.4+AI_Conf>=60% (MEDIUM/HIGH)+TRENDING)\n"
+        out += f"🏆⭐ TOP SHORTS [0]: no SELL signals meet ⭐ criteria (WR>=55%+CF>=7.9+AI_Conf>=90%+TRENDING)\n"
 
     # ── Quality tier blocks (v38 P0-4/P0-5/P1-5/P1-6) ──────────────────────────
     # v38 P1-6: oversized separation (use max_pos_pct from parse_args)

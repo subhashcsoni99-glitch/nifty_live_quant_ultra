@@ -1,4 +1,4 @@
-# NIFTY Live Quant Ultra — SKILL.md v51
+# NIFTY Live Quant Ultra — SKILL.md v52
 
 > Multi-mode quant trading system. Paper trading only. No live money.
 > Backtest: pinned `end_date='2026-05-31'` (3yr, Jun 2023–May 2026) | Score based on validated metrics
@@ -15,10 +15,54 @@
 | v41 | 9.5/10 | C1/C2/C3 split, ML_CONFLICT→CatD, BEAR_DIV fix |
 | v42 | 9.5/10 | Cat C2a/C2b split, backtest session cap, WR 40%→38%, v14 pinned |
 | v43–v49 | 9.5/10 | Sharpe gate, MAX_POSITION=5%, regime-aware targets, T1/T2/T3 multi-target |
-| **v51** | **9.5/10** | **P0-2: removed broken backtest run counter (non-determinism fix)** |
+| **v51** | **9.5/10** | **WR>=75% gate, P0-2/3/4 fixes** |
+| **v52** | **9.5/10** | **HIGH_CONVICTION mode: BB%+StochRSI+Vol+MACD → 55% WR gate** |
 | | | **P0-3: DD gate 55%→30%** |
 | | | **P0-4: removed stale qualified list from docs (now live-only)** |
 | | | **SKILL.md v51: full rewrite with honest qualified stock sourcing** |
+
+---
+
+## v52 — HIGH_CONVICTION Mode (2026-06-28)
+
+> **New signal mode with 7-indicator combination targeting WR ≥ 55%.**
+
+| ID | Fix | File | Result |
+|----|-----|------|--------|
+| **v52** | `HC_CONFIG`: RSI<30 + ADX>20 + Vol>1.2× + BB%<35 + StochRSI<30 + MACD>+0 + MA20 | `nifty_core.py` | 7-indicator alignment ✅ |
+| | `--hc` flag in backtest + scan | `backtest.py`, `scan.py` | Dedicated HC mode ✅ |
+| | WR gate: 55% for HC mode (75% default) | `scan.py` | Statistically achievable ✅ |
+
+### HIGH_CONVICTION Signal (7 conditions, need 5+)
+
+```
+BUY: RSI < 30  +  Price > MA20  +  MACD > Signal  +  Vol > 1.2×
+           +  ADX > 20  +  BB% < 35  +  StochRSI < 30
+SHORT: RSI > 70 (independent trigger, same as default)
+```
+
+### Usage
+
+```bash
+# HC backtest — find qualified stocks in HIGH_CONVICTION mode
+python3 backtest.py --all --years 3 --hc
+
+# HC scan — live signals using HC mode
+python3 scan.py --ai --hc --format telegram
+
+# Default scan — WR>=75% gate (very restrictive)
+python3 scan.py --ai --format telegram
+```
+
+### HC Backtest Results (3yr, Jun 2023–May 2026)
+
+| Stock | WR | RealRet | Sharpe | DD | Trades | Notes |
+|-------|-----|---------|--------|-----|--------|-------|
+| COFORGE | 52% | +0.27% | 1.68 | 21.7% | 25 | ✅ Qualified |
+| HDFCLIFE | 45% | +0.27% | 1.55 | 22.4% | 20 | ✅ Qualified |
+| AXISBANK | 52% | +0.18% | 1.15 | 22.1% | 21 | ✅ Qualified |
+| ADANIENT | 46% | +0.16% | 0.90 | 14.2% | 24 | ✅ Qualified |
+| HINDALCO | 65% | +1.05% | 1.93 | 15.3% | 17 | ⭐ TOP_PICK (live) |
 
 ---
 

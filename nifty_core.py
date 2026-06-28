@@ -62,14 +62,10 @@ DEFAULT_STOCKS = GOOD_STOCKS
 # ─── ATR Multipliers ─────────────────────────────────────────────────────────
 ATR_CONFIG = {
     # INTRADAY: default trading view (daily candles)
-    'intraday': {'sl': 3.0, 't1': 2.0, 't2': 3.5},
-    'intraday_tight': {'sl': 1.5, 't1': 0.75, 't2': 0.75, 't3': 1.5},
-    # v43: T1< T2< T3 structure for tight mode
-    # T1 = entry + 0.75× ATR(5)   ← tightest (short-term)
-    # T2 = entry + 0.75× ATR(14)  ← medium   (current T1)
-    # T3 = entry + 1.5× ATR(14)   ← full     (current T2)
-    # SWING: wider SL, wider targets for multi-day holds
-    'swing':    {'sl': 1.5, 't1': 2.5, 't2': 4.0},  # v30: tighter SL/T1 = better WR & DD
+    'intraday': {'sl': 1.5, 't1': 2.0, 't2': 3.0},   # v46: tighter SL→R:R=1.5:1 (was 0.67:1)
+    'intraday_tight': {'sl': 1.0, 't1': 1.0, 't2': 1.5, 't3': 2.0},  # v46: tighter for testing
+    # SWING: R:R 2.0:1 — wider targets needed for multi-day holds
+    'swing':    {'sl': 1.0, 't1': 2.0, 't2': 4.0},   # v46: SL=1.0× → R:R=2.0:1 (was 1.5×→1.67:1)
     'period': 14,
 }
 
@@ -96,24 +92,75 @@ ADX_CONFIG = {
 }
 
 # ─── Momentum Mode (Option B) ─────────────────────────────────────────────────
-# BUY when RSI>70 AND MACD bearish-diverging = top-picking mode
-# SELL when RSI<30 AND MACD bullish-diverging = bottom-picking mode
-# Activated via --momentum-mode flag
+# Momentum config (stub — momentum mode uses relaxed RSI thresholds)
 MOMENTUM_CONFIG = {
-    'enabled': False,          # Master switch — activated via --momentum-mode
-    'rsi_overbought': 70,     # RSI > 70 = overbought zone for momentum BUY
-    'rsi_oversold': 30,       # RSI < 30 = oversold zone for momentum SELL
-    'macd_bear_div': True,    # Require bearish divergence for momentum BUY
-    'macd_bull_div': True,    # Require bullish divergence for momentum SELL
+    'enabled': False,
+    'rsi_overbought': 60,   # RSI>60 SHORT
+    'rsi_oversold': 40,    # RSI<40 LONG
+    'adx_min': 30,          # ADX>30 trending required
+}
+
+# ─── Multi-Factor Config (v45) ───────────────────────────────────────────────
+# Multi-factor: requires 4 of 6 conditions to fire.
+# Core conditions (always required): RSI threshold + ADX
+# Additional conditions (any 2 of 4 remaining): slope, volume, Bollinger, weekly RSI
+MULTI_CONFIG = {
+    # Core: RSI must be in oversold/overbought zone
+    'buy_max':      48,    # BUY: RSI < 48 (was 45)
+    'sell_min':     55,    # SELL: RSI > 55 (was 58)
+    # Core: market must be trending
+    'adx_min':      25,
+    # Additional: 2 of 4 must pass
+    'rsi_slope_min':  0.3, # RSI turning (was 0.5 — relaxed)
+    'vol_min':        1.1, # vol spike (was 1.3 — relaxed)
+    'bb_max':         0.35,# near lower band (was 0.20 — relaxed)
+    'bb_sell_min':    0.65,# near upper band (was 0.80)
+    'weekly_min':      35,  # weekly RSI > 35 (was 40)
+    'weekly_sell_max': 65,  # weekly RSI < 65 (was 60)
+    # Min conditions to qualify
+    'min_conditions': 4,   # 4 of 6 conditions required (core RSI + ADX always count)
 }
 
 # ─── Signal Thresholds ──────────────────────────────────────────────────────
 SIGNAL_CONFIG = {
-    'min_confirmations': 2,  # was 3 — need 2 conditions instead of 3 for signal
+    'min_confirmations': 2,
     'volume_spike': 0.8,
     'vol_spike_strong': 1.3,
     'momentum_zero': 0,
 }
+
+# ─── HIGH CONVICTION Config (v47) ─────────────────────────────────────────────
+# Strictest entry mode — aims for WR > 70% by requiring ALL conditions.
+# Only fires when EVERYTHING aligns: RSI extreme + trend + volume + momentum shift.
+# Fewer trades, but very high win rate.
+# ─── ULTRA STRICT Config (v48) ────────────────────────────────────────────────
+# New indicators: StochRSI, CCI, VWAP deviation
+# Goal: WR > 60% by requiring StochRSI extreme + CCI extreme + trend confirmation
+# ─── ICHIMOKU ULTRA Config (v49) ───────────────────────────────────────────────
+# Ichimoku Cloud + StochRSI + CCI + ADX
+# BUY: price BELOW future cloud (pvc<0.3) + cloud bullish (A>B) + TK crossed ABOVE KJ + ADX>25
+# SELL: price ABOVE future cloud (pvc>0.7) + cloud bearish (A<B) + TK crossed BELOW KJ + ADX>25
+# Both require StochRSI extreme + CCI extreme + volume spike for extra confirmation
+ICHIMOKU_CONFIG = {
+    # BUY thresholds
+    'pvc_buy_max':    0.3,   # price below cloud bottom (bullish)
+    'cloud_bullish':  True,  # senkou_a > senkou_b
+    'tk_cross_up':   True,  # tenkan just crossed above kijun
+    'stoch_buy_max':  25,    # StochRSI < 25
+    'cci_buy_max':   -80,   # CCI < -80
+    'adx_min':        25,   # ADX > 25
+    'vol_min':        1.1,  # vol spike
+    # SELL thresholds
+    'pvc_sell_min':   0.7,  # price above cloud top (bearish)
+    'cloud_bearish':  True,  # senkou_a < senkou_b
+    'tk_cross_down': True,  # tenkan crossed below kijun
+    'stoch_sell_min': 75,   # StochRSI > 75
+    'cci_sell_min':   80,  # CCI > +80
+    'min_buy_conds':  4,   # 4 of 7 buy conditions
+    'min_sell_conds': 4,   # 4 of 7 sell conditions
+}
+
+
 
 # ─── Sector Mapping ─────────────────────────────────────────────────────────
 SECTORS = {
@@ -182,6 +229,8 @@ def filter_by_fundamentals(results, min_score=FUNDAMENTAL_MIN_SCORE):
     return results
 
 NIFTY_REGIME_CACHE = {'regime': 'NEUTRAL', 'score': 0, 'fetched_at': None}
+NIFTY_RSI_CACHE = {'rsi': 50, 'adx': 20, 'fetched_at': None}
+NIFTY_CLOUD_CACHE = {'cloud_green': 1, 'price_vs_cloud': 0.5, 'fetched_at': None}
 
 def get_market_regime():
     """Get cached market regime. Fetch once per session, reuse for all stocks."""
@@ -194,12 +243,18 @@ def get_market_regime():
             nifty_ma20 = nifty['Close'].rolling(20).mean().iloc[-1]
             nifty_ma50 = nifty['Close'].rolling(50).mean().iloc[-1]
             nifty_price = nifty['Close'].iloc[-1]
-            if nifty_price > nifty_ma20 and nifty_price > nifty_ma50:
+            above_ma20 = nifty_price > nifty_ma20 if not pd.isna(nifty_ma20) else False
+            above_ma50 = nifty_price > nifty_ma50 if not pd.isna(nifty_ma50) else False
+            below_ma20 = nifty_price < nifty_ma20 if not pd.isna(nifty_ma20) else False
+            below_ma50 = nifty_price < nifty_ma50 if not pd.isna(nifty_ma50) else False
+            if above_ma20 and above_ma50:
                 regime = "BULLISH"; score = 15
-            elif nifty_price < nifty_ma20 and nifty_price < nifty_ma50:
+            elif below_ma20 and below_ma50:
                 regime = "BEARISH"; score = -15
             else:
-                regime = "NEUTRAL"; score = 0
+                # Edge case: price between MAs, or MA50 NaN → use MA20 as primary
+                regime = "BULLISH" if above_ma20 else ("BEARISH" if below_ma20 else "NEUTRAL")
+                score = 5 if above_ma20 else (-5 if below_ma20 else 0)
             NIFTY_REGIME_CACHE = {'regime': regime, 'score': score, 'fetched_at': now}
         except:
             NIFTY_REGIME_CACHE = {'regime': 'NEUTRAL', 'score': 0, 'fetched_at': now}
@@ -246,6 +301,37 @@ def add_features(df):
     gain = delta.where(delta > 0, 0).rolling(14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
     df['rsi'] = 100 - (100 / (1 + gain / (loss + 1e-10)))
+    # ── RSI Slope (v45): 5-bar linear regression slope of RSI ─────────────────
+    # Positive slope = gaining upward momentum; negative = losing momentum
+    def _rsi_slope(series, n=5):
+        if len(series) < n:
+            return np.nan
+        x = np.arange(n)
+        y = series[-n:].values
+        if np.any(np.isnan(y)):
+            return np.nan
+        slope = np.polyfit(x, y, 1)[0]
+        return slope
+    df['rsi_slope'] = pd.Series(
+        [df['rsi'].iloc[max(0, i-4):i+1].pipe(lambda s: _rsi_slope(s, 5) if len(s) >= 5 else np.nan)
+         for i in range(len(df))],
+        index=df.index
+    )
+    # ── Bollinger Bands %B (v45): where is price relative to bands? ─────────────
+    # %B = (price - lower) / (upper - lower)
+    # < 0 = below lower band (extreme oversold); > 1 = above upper band (extreme overbought)
+    bb_window = 20
+    bb_std = df['Close'].rolling(bb_window).std()
+    df['bb_upper'] = df[f'ma{bb_window}'] + 2 * bb_std
+    df['bb_lower'] = df[f'ma{bb_window}'] - 2 * bb_std
+    df['bb_pct'] = (df['Close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'] + 1e-10)
+    # ── Multi-Timeframe RSI (v45): weekly RSI on daily data ─────────────────────
+    # Weekly RSI = RSI(14) on weekly closes (approximate: 5-day rolling for simplicity)
+    # True weekly would need resampling; use 5-day MA of close for approximate weekly data
+    weekly_close = df['Close'].rolling(5).mean()  # ~5 trading days = 1 week
+    w_gain = weekly_close.diff().where(weekly_close.diff() > 0, 0).rolling(14).mean()
+    w_loss = (-weekly_close.diff().where(weekly_close.diff() < 0, 0)).rolling(14).mean()
+    df['rsi_weekly'] = 100 - (100 / (1 + w_gain / (w_loss + 1e-10)))
     ema12 = df['Close'].ewm(span=12).mean()
     ema26 = df['Close'].ewm(span=26).mean()
     df['macd'] = ema12 - ema26
@@ -259,7 +345,12 @@ def add_features(df):
     df['atr5'] = tr.rolling(5).mean()  # v43: ATR(5) for tight T1
     df['vol_ma'] = df['Volume'].rolling(20).mean()
     df['vol_ratio'] = df['Volume'] / (df['vol_ma'] + 1)
+    # ── Volume trend (v45): is volume increasing? ─────────────────────────────
+    df['vol_ma5'] = df['Volume'].rolling(5).mean()
+    df['volume_trend'] = df['Volume'] / (df['vol_ma5'] + 1)  # current vol vs 5-day avg vol
     df['ret5'] = df['Close'].pct_change(5)
+    # ── ATR % of price (v45): volatility-normalized ATR ───────────────────────
+    df['atr_pct'] = df['atr'] / (df['Close'] + 1e-10) * 100  # daily ATR as % of price
     # ── ADX (Average Directional Index) — Option A ───────────────────────
     # Computed once here, reused by both get_signal() and get_adx()
     adx_period = ADX_CONFIG['period']
@@ -294,6 +385,58 @@ def add_features(df):
     df['adx'] = pd.Series(adx_wild, index=df.index)
     df['adx_di_plus'] = pos_di
     df['adx_di_minus'] = neg_di
+
+    # ── Stochastic RSI (v48): fast oscillator 0-100, more responsive than RSI alone ──
+    # Stochastic %K = (RSI - min_RSI_n) / (max_RSI_n - min_RSI_n) × 100
+    stoch_rsi_period = 14
+    df['stoch_rsi'] = (df['rsi'] - df['rsi'].rolling(stoch_rsi_period).min()) / \
+                       (df['rsi'].rolling(stoch_rsi_period).max() - df['rsi'].rolling(stoch_rsi_period).min() + 1e-10) * 100
+    # ── CCI - Commodity Channel Index (v48): measures deviation from average price ──
+    # CCI > +100 = overbought | CCI < -100 = oversold
+    tp = (df['High'] + df['Low'] + df['Close']) / 3.0
+    sma_tp = tp.rolling(20).mean()
+    roll_std = tp.rolling(20).std()  # use std as proxy for MAD (close enough for CCI)
+    df['cci'] = (tp - sma_tp) / (0.015 * roll_std + 1e-10)
+    # ── VWAP Deviation % (v48): how far price is from VWAP ──
+    # positive = above VWAP (bullish), negative = below VWAP (bearish)
+    df['vwap'] = (df['Close'] * df['Volume']).cumsum() / df['Volume'].cumsum()
+    df['vwap_dev'] = (df['Close'] - df['vwap']) / (df['vwap'] + 1e-10) * 100
+    # ── Volume-Price Trend (v48): cumulative volume × return direction ──
+    df['vpt'] = (df['Close'].pct_change() * df['Volume']).cumsum()
+
+    # ── Ichimoku Cloud (v49) ─────────────────────────────────────────────────────
+    # Components:
+    #   Tenkan-sen (conversion line): (9H+9L)/2 — short-term momentum
+    #   Kijun-sen (base line): (26H+26L)/2 — medium-term anchor
+    #   Senkou Span A: (Tenkan+Kijun)/2 shifted 26 periods ahead — cloud edge
+    #   Senkou Span B: (52H+52L)/2 shifted 26 periods ahead — cloud edge
+    #   Chikou Span: close shifted -26 — confirming trend
+    # Signals:
+    #   Cloud green (A>B) + price above cloud + Tenkan>Kijun = STRONG BUY
+    #   Cloud red (A<B) + price below cloud + Tenkan<Kijun = STRONG SELL
+    period9  = 9
+    period26 = 26
+    period52 = 52
+    nine_high  = df['High'].rolling(period9).max()
+    nine_low   = df['Low'].rolling(period9).min()
+    tf_high    = df['High'].rolling(period26).max()
+    tf_low     = df['Low'].rolling(period26).min()
+    ff_high    = df['High'].rolling(period52).max()
+    ff_low     = df['Low'].rolling(period52).min()
+    df['tenkan']     = (nine_high + nine_low) / 2
+    df['kijun']      = (tf_high  + tf_low)  / 2
+    df['senkou_a']   = ((df['tenkan'] + df['kijun']) / 2).shift(period26)   # ahead 26 bars
+    df['senkou_b']   = ((ff_high  + ff_low)  / 2).shift(period26)   # ahead 26 bars
+    df['chikou']     = df['Close'].shift(-period26)                            # behind 26 bars
+    # Cloud color: green when senkou_a > senkou_b
+    df['cloud_green'] = (df['senkou_a'] > df['senkou_b']).astype(int)
+    # Price vs cloud: >0 = above both spans, <0 = below, 0-1 = inside cloud
+    df['price_vs_cloud'] = (
+        (df['Close'] - df['senkou_b']) / (df['senkou_a'] - df['senkou_b'] + 1e-10)
+    ).clip(0, 1)   # 0=below cloud, 1=above cloud, in between=intrub cloud
+    # TK cross: tenkan crosses kijun — bullish when tenkan crosses above kijun
+    df['tenkan_above_kijun'] = (df['tenkan'] > df['kijun']).astype(int)
+
     return df
 
 # ─── Support / Resistance ──────────────────────────────────────────────────
@@ -412,7 +555,7 @@ def get_adx(df, i=None):
 
 
 # ─── Core Signal Engine ──────────────────────────────────────────────────────
-def get_signal(df, i, momentum_mode=False):
+def get_signal(df, i, momentum_mode=False, multi_mode=False, high_conviction_mode=False, ultra_mode=False, hybrid_mode=False):
     """
     Returns (signal_val, meta_dict, []).
     signal_val: 1=BUY, -1=SELL, 0=RANGE
@@ -457,6 +600,22 @@ def get_signal(df, i, momentum_mode=False):
     # Momentum Mode (Option B) — check first ───────────────────────────────
     if momentum_mode or MOMENTUM_CONFIG['enabled']:
         return _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus)
+
+    # ULTRA Strict Mode (v48) — StochRSI + CCI + VWAP + ADX — WR > 60% target
+    if ultra_mode:
+        return _get_ultra_signal(df, i, adx, adx_trending)
+
+    # Hybrid Mode: HC + Ichimoku confirmations (v49)
+    if hybrid_mode:
+        return _get_hybrid_signal(df, i, adx, adx_trending)
+
+    # High Conviction Mode (v50) — strict LONG, market-aware SHORT filters ──
+    if high_conviction_mode:
+        return _get_hc_bearish_signal(df, i, adx, adx_trending)
+
+    # Multi-Factor Mode (v45) — requires ALL conditions met ───────────────
+    if multi_mode:
+        return _get_multi_factor_signal(df, i, adx, adx_trending)
 
     # ── P1-D: 52-Week Low Filter — avoid falling knives ─────────────────
     # If price within 3% of 52-week low → BUY blocked (falling knife risk)
@@ -554,6 +713,318 @@ def get_signal(df, i, momentum_mode=False):
                    'adx': round(adx, 1), 'adx_trending': adx_trending}, []
 
 
+def _get_ultra_signal(df, i, adx, adx_trending):
+    """v49 ICHIMOKU-based Ultra Signal — Ichimoku Cloud + StochRSI + CCI + ADX + Volume.
+    
+    BUY: price BELOW future cloud + bullish cloud + TK crossed above KJ + StochRSI<25 + CCI<-80 + ADX>25
+    SELL: price ABOVE future cloud + bearish cloud + TK crossed below KJ + StochRSI>75 + CCI>+80 + ADX>25
+    Requires 4 of 7 conditions.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    stoch = float(row.get('stoch_rsi', 50))
+    cci = float(row.get('cci', 0))
+    vol_ratio = float(row.get('vol_ratio', 1))
+    cloud_green = float(row.get('cloud_green', 0))
+    price_vs_cloud = float(row.get('price_vs_cloud', 0.5))
+    tenkan = float(row.get('tenkan', price))
+    kijun = float(row.get('kijun', price))
+    u = ICHIMOKU_CONFIG
+
+    # TK cross detection
+    tk_buy_cross  = False
+    tk_sell_cross = False
+    if i > 0:
+        tk_prev = float(df['tenkan'].iloc[i-1])
+        kj_prev = float(df['kijun'].iloc[i-1])
+        tk_buy_cross  = (tenkan > kijun) and (tk_prev <= kj_prev)
+        tk_sell_cross = (tenkan < kijun) and (tk_prev >= kj_prev)
+
+    # BUY conditions (all Ichimoku-based)
+    c_cloud_ok = (cloud_green >= 1)
+    c_price_cloud = (price_vs_cloud < u['pvc_buy_max'])
+    c_tk_cross  = tk_buy_cross
+    c_stoch = (stoch < u['stoch_buy_max'])
+    c_cci   = (cci < u['cci_buy_max'])
+    c_adx   = (adx > u['adx_min'])
+    c_vol   = (vol_ratio > u['vol_min'])
+    buy_conds = [c_cloud_ok, c_price_cloud, c_tk_cross, c_stoch, c_cci, c_adx, c_vol]
+    buy_n = sum(buy_conds)
+    if buy_n >= u['min_buy_conds']:
+        reasons = [
+            f"📈 ICHIMOKU BUY | {buy_n}/7 | cloud={'green' if c_cloud_ok else 'red'} pvc={price_vs_cloud:.2f}<{u['pvc_buy_max']} TK_cross={'T' if c_tk_cross else 'F'} stoch={stoch:.0f}<{u['stoch_buy_max']} cci={cci:.0f}<{u['cci_buy_max']} adx={adx:.0f}>{u['adx_min']} vol={vol_ratio:.2f}x"
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': buy_n, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'ICHIMOKU'}, []
+
+    # SELL conditions
+    c_cloud_bear  = (cloud_green <= 0)
+    c_price_cloud_s = (price_vs_cloud > u['pvc_sell_min'])
+    c_tk_cross_s  = tk_sell_cross
+    c_stoch_s = (stoch > u['stoch_sell_min'])
+    c_cci_s   = (cci > u['cci_sell_min'])
+    sell_conds = [c_cloud_bear, c_price_cloud_s, c_tk_cross_s, c_stoch_s, c_cci_s, c_adx, c_vol]
+    sell_n = sum(sell_conds)
+    if sell_n >= u['min_sell_conds']:
+        reasons = [
+            f"📉 ICHIMOKU SELL | {sell_n}/7 | cloud={'red' if c_cloud_bear else 'green'} pvc={price_vs_cloud:.2f}>{u['pvc_sell_min']} TK_cross={'T' if c_tk_cross_s else 'F'} stoch={stoch:.0f}>{u['stoch_sell_min']} cci={cci:.0f}>{u['cci_sell_min']} adx={adx:.0f}>{u['adx_min']} vol={vol_ratio:.2f}x"
+        ]
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': sell_n,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'ICHIMOKU'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': buy_n, 'sell_cnt': sell_n,
+               'divergence': None,
+               'reasons': [f"ICHIMOKU: {buy_n}/7 BUY conds, {sell_n}/7 SELL conds (need {u['min_buy_conds']})"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+def _get_high_conviction_signal(df, i, adx, adx_trending):
+    """v47 High Conviction Signal — WR > 70% target.
+    
+    BUY: RSI<32 + vol>1.4× + ADX>30 + MACD>+0 + near 20-day support
+    SELL: RSI>68 + vol>1.4× + ADX>30 + MACD<0 + near 20-day resistance
+    
+    Fewer signals, but much higher win rate.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    vol_ratio = float(row.get('vol_ratio', 1))
+    macd = float(row.get('macd', 0))
+    macd_sig = float(row.get('macd_sig', 0))
+    macd_hist = macd - macd_sig
+    low_20 = df['Low'].iloc[max(0, i-20):i+1].min()
+    high_20 = df['High'].iloc[max(0, i-20):i+1].max()
+    hc = HIGH_CONVICTION_CONFIG
+
+    cond_rsi    = rsi < hc['rsi_buy_max']   # RSI < 40
+    cond_vol    = vol_ratio > hc['vol_min']        # vol > 1.1×
+    cond_adx    = adx > hc['adx_min']             # ADX > 25
+    cond_macd   = macd_hist > 0                   # MACD turning up
+    cond_supp   = (price - low_20) / price < 0.03 # within 3% of 20-day low
+
+    buy_conds = [cond_rsi, cond_vol, cond_adx, cond_macd, cond_supp]
+    buy_count = sum(buy_conds)
+    if buy_count >= hc['min_conditions']:
+        reasons = [
+            f"📈 HIGH CONVICTION BUY | {buy_count}/5 conds | RSI={rsi:.0f}<{hc['rsi_buy_max']} | vol={vol_ratio:.1f}× | ADX={adx:.0f}>{hc['adx_min']} | MACD={macd_hist:+.2f}",
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': buy_count, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HIGH_CONVICTION'}, []
+
+    # ── SELL: 3 of 5 conditions ───────────────────────────────────────────
+    cond_rsi_s  = rsi > hc['rsi_sell_min']  # RSI > 60
+    cond_macd_s = macd_hist < 0              # MACD turning down
+    cond_res    = (high_20 - price) / price < 0.03  # within 3% of 20-day high
+
+    sell_conds = [cond_rsi_s, cond_vol, cond_adx, cond_macd_s, cond_res]
+    sell_count = sum(sell_conds)
+    if sell_count >= hc['min_conditions']:
+        reasons = [
+            f"📉 HIGH CONVICTION SELL | {sell_count}/5 conds | RSI={rsi:.0f}>{hc['rsi_sell_min']} | vol={vol_ratio:.1f}× | ADX={adx:.0f}>{hc['adx_min']} | MACD={macd_hist:+.2f}",
+        ]
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': sell_count,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HIGH_CONVICTION'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': buy_count, 'sell_cnt': sell_count,
+               'divergence': None,
+               'reasons': [f"HIGH_CONVICTION: {buy_count}/5 BUY conds, {sell_count}/5 SELL conds (need {hc['min_conditions']})"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+
+def _get_hybrid_signal(df, i, adx, adx_trending):
+    """v49 Hybrid: HC Long-Only + Ichimoku confirmations.
+    
+    BUY: 3+ HC conditions (RSI<40, vol>1.1, ADX>25, MACD>0, near_support)
+          PLUS 1+ Ichimoku: cloud_green OR TK cross
+    This is the STRICTEST mode — intersection of HC momentum + Ichimoku trend.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    vol_ratio = float(row.get('vol_ratio', 1))
+    macd = float(row.get('macd', 0))
+    macd_sig = float(row.get('macd_sig', 0))
+    macd_hist = macd - macd_sig
+    low_20 = df['Low'].iloc[max(0, i-20):i+1].min()
+    cg = float(row.get('cloud_green', 0))
+    tenkan = float(row.get('tenkan', price))
+    kijun = float(row.get('kijun', price))
+    stoch = float(row.get('stoch_rsi', 50))
+    cci = float(row.get('cci', 0))
+
+    tk_buy_cross = False
+    if i > 0:
+        tk_prev = float(df['tenkan'].iloc[i-1])
+        kj_prev = float(df['kijun'].iloc[i-1])
+        tk_buy_cross = (tenkan > kijun) and (tk_prev <= kj_prev)
+
+    cond_rsi  = rsi < 40
+    cond_vol  = vol_ratio > 1.1
+    cond_adx  = adx > 25
+    cond_macd = macd_hist > 0
+    cond_supp = (price - low_20) / price < 0.03
+    hc_conds = [cond_rsi, cond_vol, cond_adx, cond_macd, cond_supp]
+    hc_count = sum(hc_conds)
+
+    cond_cloud = cg >= 1
+    cond_tk   = tk_buy_cross
+    cond_stoch = stoch < 30
+    cond_cci  = cci < -80
+    ich_conds = [cond_cloud, cond_tk, cond_stoch, cond_cci]
+    ich_count = sum(ich_conds)
+
+    if hc_count >= 3 and (ich_count >= 1):
+        reasons = [
+            f"HYBRID BUY | HC:{hc_count}/5 + Ichimoku:{ich_count}/4 | RSI={rsi:.0f} vol={vol_ratio:.1f}x ADX={adx:.0f} cloud={'G' if cond_cloud else 'R'} TK={'T' if cond_tk else 'F'} stoch={stoch:.0f} cci={cci:.0f}"
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': hc_count, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HYBRID'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': hc_count, 'sell_cnt': ich_count,
+               'divergence': None,
+               'reasons': [f"Hybrid: HC:{hc_count}/5, Ichimoku:{ich_count}/4 (need 3+HC + 1+Ich)"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+
+def _get_hybrid_signal(df, i, adx, adx_trending):
+    """v49 Hybrid: HC Long-Only + Ichimoku confirmations.
+    
+    BUY: 3+ HC conditions (RSI<40, vol>1.1, ADX>25, MACD>0, near_support)
+          PLUS 1+ Ichimoku: cloud_green OR TK cross
+    This is the STRICTEST mode — intersection of HC momentum + Ichimoku trend.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    vol_ratio = float(row.get('vol_ratio', 1))
+    macd = float(row.get('macd', 0))
+    macd_sig = float(row.get('macd_sig', 0))
+    macd_hist = macd - macd_sig
+    low_20 = df['Low'].iloc[max(0, i-20):i+1].min()
+    high_20 = df['High'].iloc[max(0, i-20):i+1].max()
+    cg = float(row.get('cloud_green', 0))
+    pvc = float(row.get('price_vs_cloud', 0.5))
+    tenkan = float(row.get('tenkan', price))
+    kijun = float(row.get('kijun', price))
+    stoch = float(row.get('stoch_rsi', 50))
+    cci = float(row.get('cci', 0))
+
+    # TK cross
+    tk_buy_cross = False
+    if i > 0:
+        tk_prev = float(df['tenkan'].iloc[i-1])
+        kj_prev = float(df['kijun'].iloc[i-1])
+        tk_buy_cross = (tenkan > kijun) and (tk_prev <= kj_prev)
+
+    # HC conditions
+    cond_rsi   = rsi < 40
+    cond_vol   = vol_ratio > 1.1
+    cond_adx   = adx > 25
+    cond_macd  = macd_hist > 0
+    cond_supp  = (price - low_20) / price < 0.03
+    hc_conds = [cond_rsi, cond_vol, cond_adx, cond_macd, cond_supp]
+    hc_count = sum(hc_conds)
+
+    # Ichimoku conditions
+    cond_cloud = cg >= 1        # bullish cloud
+    cond_tk    = tk_buy_cross   # TK bullish cross
+    cond_stoch = stoch < 30     # StochRSI oversold
+    cond_cci   = cci < -80      # CCI oversold
+    ich_conds = [cond_cloud, cond_tk, cond_stoch, cond_cci]
+    ich_count = sum(ich_conds)
+
+    # BUY: need 3+ HC conditions AND 1+ Ichimoku confirmation
+    if hc_count >= 3 and (ich_count >= 1):
+        reasons = [
+            f"📈 HYBRID BUY | HC:{hc_count}/5 + Ichimoku:{ich_count}/4 | RSI={rsi:.0f}<40 | vol={vol_ratio:.1f}× | ADX={adx:.0f}>25 | MACD={macd_hist:+.2f} | cloud={'G' if cond_cloud else 'R'} TK={'T' if cond_tk else 'F'} stoch={stoch:.0f} cci={cci:.0f}"
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': hc_count, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HYBRID'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': hc_count, 'sell_cnt': ich_count,
+               'divergence': None,
+               'reasons': [f"Hybrid: HC:{hc_count}/5, Ichimoku:{ich_count}/4 (need 3+HC + 1+Ich)"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+def _get_multi_factor_signal(df, i, adx, adx_trending):
+
+    """v45 Multi-Factor Signal — requires 4 of 6 conditions (core RSI + ADX + 2 of 4 extras).
+    
+    BUY: RSI < buy_max + ADX >= adx_min + 2 of: slope, vol, BB, weekly RSI
+    SELL: RSI > sell_min + ADX >= adx_min + 2 of: slope, vol, BB, weekly RSI
+    """
+    row = df.iloc[i]
+    rsi        = float(row['rsi'])
+    rsi_slope  = float(row.get('rsi_slope', 0))
+    vol_ratio  = float(row.get('vol_ratio', 1))
+    bb_pct     = float(row.get('bb_pct', 0.5))
+    weekly_rsi = float(row.get('rsi_weekly', 50))
+    price      = float(row['Close'])
+    mc = MULTI_CONFIG
+
+    def _count_buy_conds():
+        c = {'rsi': rsi < mc['buy_max'],
+             'slope': rsi_slope > mc['rsi_slope_min'],
+             'vol': vol_ratio > mc['vol_min'],
+             'bb': bb_pct < mc['bb_max'],
+             'weekly': weekly_rsi > mc['weekly_min'],
+             'adx': adx >= mc['adx_min']}
+        return sum(c.values()), c
+
+    def _count_sell_conds():
+        c = {'rsi': rsi > mc['sell_min'],
+             'slope': rsi_slope < -mc['rsi_slope_min'],
+             'vol': vol_ratio > mc['vol_min'],
+             'bb': bb_pct > mc['bb_sell_min'],
+             'weekly': weekly_rsi < mc['weekly_sell_max'],
+             'adx': adx >= mc['adx_min']}
+        return sum(c.values()), c
+
+    n_buy, buy_c = _count_buy_conds()
+    if n_buy >= mc['min_conditions']:
+        reasons = [
+            f"📈 MULTI BUY | RSI={rsi:.0f}<{mc['buy_max']} | ADX={adx:.0f} | {n_buy}/6 conds",
+            f"   slope={'✅' if buy_c['slope'] else '❌'} | vol={'✅' if buy_c['vol'] else '❌'} | BB%={'✅' if buy_c['bb'] else '❌'} | wRSI={'✅' if buy_c['weekly'] else '❌'}",
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': n_buy, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'MULTI'}, []
+
+    n_sell, sell_c = _count_sell_conds()
+    if n_sell >= mc['min_conditions']:
+        reasons = [
+            f"📉 MULTI SELL | RSI={rsi:.0f}>{mc['sell_min']} | ADX={adx:.0f} | {n_sell}/6 conds",
+            f"   slope={'✅' if sell_c['slope'] else '❌'} | vol={'✅' if sell_c['vol'] else '❌'} | BB%={'✅' if sell_c['bb'] else '❌'} | wRSI={'✅' if sell_c['weekly'] else '❌'}",
+        ]
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': n_sell,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'MULTI'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
+               'divergence': None,
+               'reasons': [f"MULTI: {max(n_buy,n_sell)}/6 conds (need {mc['min_conditions']}) — RSI={rsi:.0f} ADX={adx:.0f}"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
 def _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus):
     """Option B: Momentum Mode — top/bottom picking with RSI + MACD divergence.
     
@@ -604,46 +1075,33 @@ def _get_momentum_signal(df, i, adx_trending, adx, di_plus, di_minus):
             rsi_ok    = last_rt <= last_pt and rsi_vals[last_rt] <= rsi_vals[prev_pt]  # RSI failed to confirm
             bull_div  = price_ok and rsi_ok
 
-    bear_div = bear_div if MOMENTUM_CONFIG['macd_bear_div'] else True
-    bull_div = bull_div if MOMENTUM_CONFIG['macd_bull_div'] else True
+    bear_div = True   # disabled for momentum mode — RSI+ADX only
+    bull_div = True   # disabled for momentum mode — RSI+ADX only
 
-    # Momentum BUY: RSI > 70 + bearish divergence confirmed
-    if rsi_overbought and bear_div:
-        if not adx_trending and ADX_CONFIG.get('enabled'):
-            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
-                       'divergence': 'BEARISH',
-                       'reasons': [f"⛔ MOMENTUM BUY blocked: {adx_note}<{ADX_CONFIG['threshold']} (not trending)"],
-                       'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+    # Momentum SHORT: RSI > 60 + ADX > 30 → downtrend, expect continuation
+    if rsi_overbought and adx >= MOMENTUM_CONFIG.get('adx_min', 30):
         reasons = [
-            f"📍 MOMENTUM BUY (top-pick) | RSI={rsi:.0f}>70 (overbought)",
-            f"   MACD bearish-divergence confirmed → expect drop",
-            f"   {adx_note} {'✅ trending' if adx_trending else '⚠️ weak trend'}",
-        ]
-        return 1, {'signal': 'BUY', 'buy_cnt': 5, 'sell_cnt': 0,
-                   'divergence': 'BEARISH', 'reasons': reasons,
-                   'adx': round(adx, 1), 'adx_trending': adx_trending,
-                   'mode': 'MOMENTUM'}, []
-
-    # Momentum SELL: RSI < 30 + bullish divergence confirmed
-    if rsi_oversold and bull_div:
-        if not adx_trending and ADX_CONFIG.get('enabled'):
-            return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
-                       'divergence': 'BULLISH',
-                       'reasons': [f"⛔ MOMENTUM SELL blocked: {adx_note}<{ADX_CONFIG['threshold']} (not trending)"],
-                       'adx': round(adx, 1), 'adx_trending': adx_trending}, []
-        reasons = [
-            f"📍 MOMENTUM SELL (bottom-pick) | RSI={rsi:.0f}<30 (oversold)",
-            f"   MACD bullish-divergence confirmed → expect bounce",
-            f"   {adx_note} {'✅ trending' if adx_trending else '⚠️ weak trend'}",
+            f"📍 MOMENTUM SHORT | RSI={rsi:.0f}>60 (overbought)",
+            f"   ADX={adx:.0f} ✅ trending",
         ]
         return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': 5,
-                    'divergence': 'BULLISH', 'reasons': reasons,
-                    'adx': round(adx, 1), 'adx_trending': adx_trending,
+                    'divergence': 'BEARISH', 'reasons': reasons,
+                    'adx': round(adx, 1), 'adx_trending': True,
                     'mode': 'MOMENTUM'}, []
+    # Momentum LONG: RSI < 40 + ADX > 30 → oversold in downtrend, expect bounce
+    if rsi_oversold and adx >= MOMENTUM_CONFIG.get('adx_min', 30):
+        reasons = [
+            f"📍 MOMENTUM LONG | RSI={rsi:.0f}<40 (oversold)",
+            f"   ADX={adx:.0f} ✅ trending",
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': 5, 'sell_cnt': 0,
+                   'divergence': 'BULLISH', 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': True,
+                   'mode': 'MOMENTUM'}, []
 
     return 0, {'signal': 'RANGE', 'buy_cnt': 0, 'sell_cnt': 0,
                'divergence': None,
-               'reasons': [f"No momentum signal (RSI={rsi:.0f}, {adx_note})"],
+               'reasons': [f"No momentum signal (RSI={rsi:.0f}, ADX={adx:.0f})"],
                'adx': round(adx, 1), 'adx_trending': adx_trending}, []
 
 def build_reasons(c_price_ma20, c_price_ma50, c_ma50_ma200, c_rsi_buy, c_rsi_sell,

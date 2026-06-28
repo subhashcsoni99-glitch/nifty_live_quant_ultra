@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Live Quant Ultra - Backtest v44
+NIFTY Live Quant Ultra - Backtest v50
 v10→v11 changes:
   1. PRIMARY metric = realized_return (P&L / capital_at_risk), NOT compounded
   2. peak_realized tracks settled cash only (updated only on exits)
@@ -53,7 +53,7 @@ if '--rsi-mode' in _sys.argv:
             _sys.argv.pop(idx)   # remove '--rsi-mode'
             _sys.argv.pop(idx)   # remove 'strict'/'relaxed'
 
-from nifty_categorize import categorize_results  # BUG-4: shared categorization
+from nifty_categorize import categorize_results
 from nifty_core import (
     DEFAULT_STOCKS, EXCLUDED_STOCKS,
     ATR_CONFIG, RSI_CONFIG, SIGNAL_CONFIG, ADX_CONFIG, MOMENTUM_CONFIG,
@@ -62,12 +62,45 @@ from nifty_core import (
     get_sector, check_sector_limit, build_ml_features,
     get_signal as core_get_signal,
 )
+import joblib, os as _os
 
 STOCKS = DEFAULT_STOCKS
 MIN_TRADES = 20   # 3yr window ≈ 1 trade/month = 20 trades minimum
 # ─── BLACKLIST ─────────────────────────────────────────────────────────────────
-# Persistent-lose stocks: very few signals, always negative
 BLACKLIST = {'SBIN', 'BHEL', 'TITAN'}
+
+# ─── ML PROBABILITY FILTER (v45) ─────────────────────────────────────────────
+# Only enter when ML win_prob > ML_THRESHOLD. Default 0.55 = require >55% confidence.
+ML_THRESHOLD = 0.55
+MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+
+# ── ML model cache: lazy-load once per stock, reuse across bars ──────────────
+_ml_cache = {}  # {symbol: loaded_model}
+
+def _get_ml_win_prob(symbol, df, i):
+    """Get ML-predicted win probability (0-1). Uses per-symbol model cache."""
+    sym = symbol.replace('.NS', '')
+    model_path = os.path.join(MODEL_DIR, f"{sym}_model.joblib")
+    if not _os.path.exists(model_path):
+        return None
+    # Cache the loaded model for this stock
+    if sym not in _ml_cache:
+        try:
+            _ml_cache[sym] = joblib.load(model_path)
+        except Exception:
+            return None
+    try:
+        feat = build_ml_features(df, idx=i)
+        if feat is None or len(feat) == 0:
+            return None
+        model = _ml_cache[sym]
+        prob = model.predict_proba(feat)
+        if hasattr(prob, 'shape') and prob.shape[1] >= 2:
+            return float(prob[0][1])  # P(up)
+        return None
+    except Exception:
+        return None
+
 
 # ─── POSITION SIZE CAP ────────────────────────────────────────────────────────
 # Maximum position as % of capital per trade.
@@ -100,20 +133,21 @@ ABSL_CONFIG = {
     'absl_pct_after_T2':   None,  # disabled after T2 partial hit
 }
 
-# ─── R:R ENTRY FILTER (v42) ───────────────────────────────────────────────────
-# Skip BUY if estimated R:R < min_rr_ratio.
-# estimated_RR = T1_distance / SL_distance = t1_mult / sl_mult = 2.5 / 1.5 = 1.67
-# For swing: t1_mult=2.5, sl_mult=1.5 → base RR=1.67
-# For intraday: t1_mult=2.0, sl_mult=3.0 → base RR=0.67
-# Set to 0 to disable. Recommended: 1.5 (skip if RR < 1.5).
-MIN_RR_RATIO = 0   # set to 1.5 to filter low-RR setups
-
 # ─── ADX TIGHTEN FILTER (v41) ──────────────────────────────────────────────────
 # Optional tighter ADX filter to improve Sharpe ratio.
 # When min_adx > 0: only enter trades when ADX >= min_adx (stronger trend confirmation)
 # Default 0 = disabled (use ADX_CONFIG.threshold from nifty_core.py)
 # Recommended: 30 (moderate trend) or 35 (strong trend only — fewer signals)
-MIN_ADX_ENTRY = 0   # set to 30 or 35 to tighten entry ADX filter
+MIN_ADX_ENTRY = 30   # ← 30: FILTERS CHOPPY MARKETS — key WR fix
+
+# ─── PER-MODE LEVEL FACTORS ───────────────────────────────────────────────────
+# Multiply ATR_CONFIG values per level_mode to widen/tighten stops
+# Swing fix: wider SL=2.0× (1.5× × 1.33), T1=2.0× (2.5× × 0.80) → fewer SL hits
+# Intraday: keep as-is (3.0× SL already loose), rely on ADX filtering
+SL_FACTOR  = {'swing': 1.33, 'intraday': 1.0, 'intraday_tight': 1.0}
+T1_FACTOR  = {'swing': 0.80, 'intraday': 1.0, 'intraday_tight': 1.0}
+T2_FACTOR  = {'swing': 0.75, 'intraday': 1.0, 'intraday_tight': 1.0}
+MAX_HOLD   = {'swing': 30, 'intraday': 15, 'intraday_tight': 10}
 
 # ─── REVERSAL CONFIG ────────────────────────────────────────────────────────
 # REVERSAL exit fires only when BOTH conditions met:
@@ -143,7 +177,7 @@ BEAR_REGIME_SL_FACTOR = 1.2     # was 0.8 — WRONG: tighter SL in bear = MORE s
 MIN_HOLD_DAYS_FOR_REVERSAL = REVERSAL_MIN_HOLD_DAYS  # backward compat alias
 
 # ─── Signal Engine (delegated to nifty_core — single source of truth) ───────
-def get_signal(df, i, momentum_mode=False, adx_filter=True):
+def get_signal(df, i, momentum_mode=False, multi_mode=False, high_conviction_mode=False, ultra_mode=False, hybrid_mode=False, adx_filter=True):
     """backtest.py wrapper — delegates to nifty_core.get_signal.
     
     momentum_mode: if True, uses RSI>70/RSI<30 momentum logic (Option B)
@@ -151,14 +185,17 @@ def get_signal(df, i, momentum_mode=False, adx_filter=True):
                    Controlled by --no-adx-filter CLI flag.
     
     Returns (signal_val, signal_name, divergence, adx_info_dict).
-    """
+    
+    multi_mode: if True, uses multi-factor signals (RSI+slope+vol+BB+weeklyRSI)
+    momentum_mode: if True, uses RSI>60 momentum logic
+    hybrid_mode: if True, uses HC + Ichimoku hybrid signals"""
     # Temporarily override ADX_CONFIG.enabled to match adx_filter flag
     import nifty_core as _nc
     _saved_enabled = _nc.ADX_CONFIG.get('enabled', True)
     if not adx_filter:
         _nc.ADX_CONFIG['enabled'] = False
     try:
-        sig_val, meta, _ = _nc.get_signal(df, i, momentum_mode=momentum_mode)
+        sig_val, meta, _ = _nc.get_signal(df, i, momentum_mode=momentum_mode, multi_mode=multi_mode, high_conviction_mode=high_conviction_mode, ultra_mode=ultra_mode, hybrid_mode=hybrid_mode)
     finally:
         _nc.ADX_CONFIG['enabled'] = _saved_enabled
     adx_val, _, _ = _nc.get_adx(df, i)
@@ -173,13 +210,19 @@ def get_signal(df, i, momentum_mode=False, adx_filter=True):
 
 def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limits=False,
                    slippage_pct=0.001, max_position_pct=0.05,  # v43: 5% cap halves DD vs v42
-                   use_t1_partial=True, max_hold_days=30,  # v43: was 20 → 30
+                   use_t1_partial=True, max_hold_days=None,  # None = auto from MAX_HOLD
                    no_sig_exit=False, verbose=False,
                    level_mode='swing',
                    momentum_mode=False,
+                   multi_mode=False,
+                   high_conviction_mode=False,
+                   ultra_mode=False,
+                   long_only=False,
+                   hybrid_mode=False,
                    adx_filter=True,
-                   min_adx=0,
-                   min_rr_ratio=0):
+                   min_adx=MIN_ADX_ENTRY,
+                   min_rr_ratio=0,
+                   ml_threshold=ML_THRESHOLD):
     """
     Key changes vs v8:
     - no_sig_exit: SELL signal does not trigger exit (only SL/TSL/ABSSL/expiry)
@@ -227,7 +270,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
 
     entry_adx_info = None  # snapshot of ADX state at signal entry — persists across bars
     for i in range(200, len(df)):
-        sig_val, sig_name, div, adx_info = get_signal(df, i, momentum_mode=momentum_mode, adx_filter=adx_filter)
+        sig_val, sig_name, div, adx_info = get_signal(df, i, momentum_mode=momentum_mode, multi_mode=multi_mode, high_conviction_mode=high_conviction_mode, ultra_mode=ultra_mode, hybrid_mode=hybrid_mode, adx_filter=adx_filter)
         price = df['Close'].iloc[i]
         atr = df['atr'].iloc[i]
         if pd.isna(atr) or atr == 0:
@@ -272,13 +315,14 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             if not (pd.isna(rsi) or float(rsi) < float(RSI_ENTRY_MAX)):
                 continue
 
-            # v42 R:R entry filter — skip if estimated R:R is below minimum threshold
-            if min_rr_ratio > 0:
-                t1_mult = ATR_CONFIG.get(level_mode, ATR_CONFIG['swing'])['t1']
-                sl_mult = ATR_CONFIG.get(level_mode, ATR_CONFIG['swing'])['sl']
-                est_rr = t1_mult / sl_mult if sl_mult > 0 else 0
-                if est_rr < min_rr_ratio:
-                    continue  # skip — R:R below minimum threshold
+            # ML probability filter (v45) — only enter if ML win_prob > threshold
+            ml_prob = _get_ml_win_prob(name, df, i)
+            if ml_prob is not None and ml_prob < ml_threshold:
+                continue  # ML not confident enough — skip
+
+            # Auto max_hold_days from level_mode
+            if max_hold_days is None:
+                max_hold_days = MAX_HOLD.get(level_mode, 30)
 
             shares = raw_shares
             shares_remaining = raw_shares
@@ -298,11 +342,77 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 print(f"  📈 BUY {name} @ ₹{entry_price:.2f} [{entry_date.date()}] "
                       f"shares={shares} atr={atr:.2f} rsi={rsi:.1f} entry_adx={(entry_adx_info or {}).get('adx', 0):.0f}")
 
+        # ── SHORT Entry (momentum mode: RSI>70 overbought → mean-reversion short) ────
+        elif sig_val == -1 and position is None:
+            if long_only:
+                continue  # LONG ONLY — skip shorts
+            entry_adx_info = adx_info
+            if sector_limits:
+                sect = get_sector(name)
+                if check_sector_limit(sect, sector_counts, MAX_PER_SECTOR):
+                    continue
+            if name in BLACKLIST:
+                continue
+            if min_adx > 0 and adx_filter:
+                if adx_info.get('adx', 0) < min_adx:
+                    continue
+
+            # SHORT: risk = capital * 0.005, SL = entry + sl_dist (buy to cover)
+            risk = capital * 0.005
+            base_sl = ATR_CONFIG[level_mode]['sl'] * SL_FACTOR.get(level_mode, 1.0)
+            sl_dist = atr * base_sl
+            raw_shares = max(1, int(risk / sl_dist))
+            pos_value = raw_shares * slip_entry
+            max_pos = capital * max_position_pct
+            if pos_value > max_pos:
+                raw_shares = max(1, int(max_pos / slip_entry))
+
+            # RSI entry filter for SHORT: skip if RSI < RSI_SELL_MIN (not overbought enough)
+            rsi = df['rsi'].iloc[i]
+            if not (pd.isna(rsi) or float(rsi) > float(RSI_CONFIG.get('sell_relaxed', 40))):
+                continue
+
+            # ML probability filter for SHORT (v45)
+            ml_prob = _get_ml_win_prob(name, df, i)
+            if ml_prob is not None and ml_prob > (1 - ml_threshold):
+                # ML thinks DOWN likely → good for SHORT (opposite threshold for shorts)
+                pass  # keep the signal
+            elif ml_prob is not None and ml_prob < (1 - ml_threshold):
+                continue  # ML thinks UP likely → skip short
+
+            if max_hold_days is None:
+                max_hold_days = MAX_HOLD.get(level_mode, 30)
+
+            shares = raw_shares
+            shares_remaining = raw_shares
+            t1_triggered = False
+            was_profitable = False
+            position = 'SHORT'
+            entry_price = slip_entry  # short sale price
+            entry_date = df.index[i]
+            tsl = entry_price + atr * 1.5  # TSL for short: buy-back stop above entry
+            entry_cap_at_risk = shares * entry_price
+            capital -= entry_cap_at_risk
+
+            if sector_limits:
+                sector_counts[sect] = sector_counts.get(sect, 0) + 1
+
+            if verbose:
+                print(f"  📉 SHORT {name} @ ₹{entry_price:.2f} [{entry_date.date()}] "
+                      f"shares={shares} atr={atr:.2f} rsi={rsi:.1f} entry_adx={(entry_adx_info or {}).get('adx', 0):.0f}")
+
         # ── In Position ────────────────────────────────────────────────
         elif position == 'LONG':
-            sl  = entry_price - atr * ATR_CONFIG[level_mode]['sl']
-            t1  = entry_price + atr * ATR_CONFIG[level_mode]['t1']
-            t2  = entry_price + atr * ATR_CONFIG[level_mode]['t2']
+            # ATR-based levels with per-mode factors (wider SL = fewer SL hits = higher WR)
+            base_sl  = ATR_CONFIG[level_mode]['sl']  * SL_FACTOR.get(level_mode, 1.0)
+            base_t1  = ATR_CONFIG[level_mode]['t1']  * T1_FACTOR.get(level_mode, 1.0)
+            base_t2  = ATR_CONFIG[level_mode]['t2']  * T2_FACTOR.get(level_mode, 1.0)
+            sl_dist  = atr * base_sl
+            t1_dist  = atr * base_t1
+            t2_dist  = atr * base_t2
+            sl  = entry_price - sl_dist
+            t1  = entry_price + t1_dist
+            t2  = entry_price + t2_dist
 
             # T1 Partial Exit (one-time at T1 — 10% of remaining position)
             if use_t1_partial and shares_remaining > 0 and price >= t1 and not t1_triggered:
@@ -476,6 +586,134 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     sect = get_sector(name)
                     sector_counts[sect] = max(0, sector_counts.get(sect, 0) - 1)
 
+        # ── SHORT Position Management ───────────────────────────────────────────
+        elif position == 'SHORT':
+            # SHORT: buy to cover at target, sell to cover at SL
+            base_sl = ATR_CONFIG[level_mode]['sl'] * SL_FACTOR.get(level_mode, 1.0)
+            base_t1 = ATR_CONFIG[level_mode]['t1'] * T1_FACTOR.get(level_mode, 1.0)
+            base_t2 = ATR_CONFIG[level_mode]['t2'] * T2_FACTOR.get(level_mode, 1.0)
+            sl_dist = atr * base_sl
+            t1_dist = atr * base_t1
+            t2_dist = atr * base_t2
+            # SHORT SL: price rises to entry+sl_dist → stop loss (buy to cover)
+            sl  = entry_price + sl_dist
+            # SHORT T1: price falls to entry-t1_dist → target (buy to cover)
+            t1  = entry_price - t1_dist
+            t2  = entry_price - t2_dist
+
+            # T1 Partial: buy to cover 40% at T1, let 60% run
+            if use_t1_partial and shares_remaining > 0 and price <= t1 and not t1_triggered:
+                exit_shares = max(1, shares_remaining // 10 * 4)
+                capital += exit_shares * slip_exit  # buy to cover at slip_exit → capital increases
+                shares_remaining -= exit_shares
+                partial_exits += 1
+                t1_triggered = True
+                was_profitable = True
+                peak_realized = max(peak_realized, capital)
+                tsl = min(tsl, entry_price)  # activate TSL after partial
+                tsl = min(tsl, price + atr * 1.5)
+                if verbose:
+                    print(f"  🎯 T1 PARTIAL COVER {name} @ ₹{slip_exit:.2f} "
+                          f"[{df.index[i].date()}] covered={exit_shares} remain={shares_remaining}")
+
+            # Time exit
+            hold_days = (df.index[i] - entry_date).days if entry_date else 0
+            unreal_pnl = ((entry_price - price) / entry_price) * 100
+            if hold_days > max_hold_days:
+                if shares_remaining > 0:
+                    capital += shares_remaining * slip_exit
+                pnl = ((entry_price - slip_exit) / entry_price) * 100  # SHORT pnl: entry - exit
+                pnl_list.append(pnl)
+                realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
+                peak_realized = max(peak_realized, capital)
+                trades.append({'pnl': round(pnl, 2), 'type': 'TIME',
+                               'sector': get_sector(name), 'date': str(df.index[i].date()),
+                               'partial': partial_exits > 0, 'hold_days': hold_days,
+                               'unreal_pct': round(unreal_pnl, 2)})
+                shares = 0; shares_remaining = 0; t1_triggered = False
+                position = None; entry_date = None
+                if sector_limits:
+                    sector_counts[get_sector(name)] = max(0, sector_counts.get(get_sector(name), 0) - 1)
+                continue
+
+            # ABSSL: hard cap at -15% from entry
+            atr_pct = atr / entry_price if entry_price > 0 else 0.02
+            absl_pct = ABSL_CONFIG.get('absl_pct_before_T1', 0.85)
+            abs_sl = entry_price * (1 + (1 - absl_pct))  # e.g. 1/(1-0.85) = 1.15× entry
+            if price >= abs_sl:
+                if shares_remaining > 0:
+                    capital += shares_remaining * slip_exit
+                pnl = ((entry_price - slip_exit) / entry_price) * 100
+                pnl_list.append(pnl)
+                realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
+                peak_realized = max(peak_realized, capital)
+                trades.append({'pnl': round(pnl, 2), 'type': 'ABSSL',
+                               'sector': get_sector(name), 'date': str(df.index[i].date()),
+                               'partial': partial_exits > 0})
+                shares = 0; shares_remaining = 0; t1_triggered = False
+                position = None; entry_date = None
+                if sector_limits:
+                    sector_counts[get_sector(name)] = max(0, sector_counts.get(get_sector(name), 0) - 1)
+                continue
+
+            # TSL after T1 partial
+            if t1_triggered and shares_remaining > 0:
+                new_tsl = price + atr * 1.5
+                if new_tsl < tsl:
+                    tsl = new_tsl
+                if tsl > 0 and price >= tsl:  # price rose to TSL → stop out
+                    if shares_remaining > 0:
+                        capital += shares_remaining * slip_exit
+                    pnl = ((entry_price - slip_exit) / entry_price) * 100
+                    pnl_list.append(pnl)
+                    realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
+                    peak_realized = max(peak_realized, capital)
+                    trades.append({'pnl': round(pnl, 2), 'type': 'TSL',
+                                   'sector': get_sector(name), 'date': str(df.index[i].date()),
+                                   'partial': partial_exits > 0,
+                                   'entry_adx': (entry_adx_info or {}).get('adx', 0),
+                                   'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                    shares = 0; shares_remaining = 0; t1_triggered = False
+                    position = None; entry_date = None
+                    if sector_limits:
+                        sector_counts[get_sector(name)] = max(0, sector_counts.get(get_sector(name), 0) - 1)
+                    continue
+
+            # T2 exit: price falls to T2 → full cover
+            if t1_triggered and price <= t2 and shares_remaining > 0:
+                if verbose:
+                    print(f"  🎯 T2 FULL COVER {name} @ ₹{slip_exit:.2f} [{df.index[i].date()}] remain={shares_remaining}")
+                pnl = ((entry_price - slip_exit) / entry_price) * 100
+                pnl_list.append(pnl)
+                realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
+                peak_realized = max(peak_realized, capital)
+                trades.append({'pnl': round(pnl, 2), 'type': 'T2',
+                               'sector': get_sector(name), 'date': str(df.index[i].date()),
+                               'partial': partial_exits > 0,
+                               'entry_adx': (entry_adx_info or {}).get('adx', 0),
+                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                shares = 0; shares_remaining = 0; t1_triggered = False
+                position = None; entry_date = None
+                continue
+
+            # Fixed SL: price rose to entry+sl_dist → stop loss
+            if price >= sl:
+                if shares_remaining > 0:
+                    capital += shares_remaining * slip_exit
+                pnl = ((entry_price - slip_exit) / entry_price) * 100
+                pnl_list.append(pnl)
+                realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
+                peak_realized = max(peak_realized, capital)
+                trades.append({'pnl': round(pnl, 2), 'type': 'SL',
+                               'sector': get_sector(name), 'date': str(df.index[i].date()),
+                               'partial': partial_exits > 0,
+                               'entry_adx': (entry_adx_info or {}).get('adx', 0),
+                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                shares = 0; shares_remaining = 0; t1_triggered = False
+                position = None; entry_date = None
+                if sector_limits:
+                    sector_counts[get_sector(name)] = max(0, sector_counts.get(get_sector(name), 0) - 1)
+
     # ── Close open position at end ─────────────────────────────────────
     if position == 'LONG' and shares_remaining > 0:
         slip_exit_end = df['Close'].iloc[-1] * (1 - slippage_pct)
@@ -488,6 +726,19 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                        'sector': get_sector(name), 'date': str(df.index[-1].date()),
                        'partial': partial_exits > 0,
                        'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+
+    if position == 'SHORT' and shares_remaining > 0:
+        slip_exit_end = df['Close'].iloc[-1] * (1 + slippage_pct)  # buy to cover at ask
+        capital += shares_remaining * slip_exit_end
+        pnl = ((entry_price - slip_exit_end) / entry_price) * 100
+        pnl_list.append(pnl)
+        realized_pnl_sum += shares_remaining * (entry_price - slip_exit_end)
+        peak_realized = max(peak_realized, capital)
+        trades.append({'pnl': round(pnl, 2), 'type': 'CLOSED',
+                       'sector': get_sector(name), 'date': str(df.index[-1].date()),
+                       'partial': partial_exits > 0,
+                       'entry_adx': (entry_adx_info or {}).get('adx', 0),
+                       'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
 
     if not trades:
         return dict(symbol=name, trades=0, win_rate=0, compounded_return=0.0,
@@ -532,12 +783,13 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
     choppy_trades = len(trades) - trending_trades
 
     # QUALIFIED v14 (v43): Sharpe ≥ 0.8 added — filters borderline stocks
-    # v43: Sharpe ≥ 0.8 + max_hold_days=30 (was 20) + no unreal_loss guard
-    # This eliminates CIPLA (Sharpe=0.48), JSWSTEEL (Sharpe=0.71) from qualified
+    # v50: DD gate 55%→30% — swing DD of 30%+ means 6+ consecutive losers on 5% pos size
+    # With WR=40-50%, getting 6 losers in a row is rare but 30% DD is still uncomfortable.
+    # 30% DD = 6 losing trades on 5% position = realistic stop-out scenario.
     qualified = (len(trades) >= MIN_TRADES and
                 realized_return > 0 and
                 sharpe >= 0.8 and               # v43: risk-adjusted quality gate
-                max_drawdown < 55.0 and
+                max_drawdown < 30.0 and         # v50: 30% DD cap (was 55% — too loose)
                 (len(wins) / len(trades) >= 0.38 if trades else False))
 
     return {
@@ -574,6 +826,11 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             'max_position_pct': max_position_pct,
             'no_sig_exit': no_sig_exit,
             'momentum_mode': momentum_mode,
+            'multi_mode': multi_mode,
+            'high_conviction_mode': high_conviction_mode,
+            'ultra_mode': ultra_mode,
+            'long_only': long_only,
+            'hybrid_mode': hybrid_mode,
             'adx_filter': adx_filter,
             'level_mode': level_mode,
             'rsi_guards': True,
@@ -581,6 +838,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
             'rsi_mode': _RSI_MODE,
             'min_adx': min_adx,       # v41
             'min_rr_ratio': min_rr_ratio,  # v42
+            'ml_threshold': ml_threshold,  # v45
         },
         'trades_list': trades,
     }
@@ -596,9 +854,15 @@ def parse_args():
     output = 'default'
     level_mode = 'swing'
     momentum_mode = False
+    multi_mode = False
+    high_conviction_mode = False
+    ultra_mode = False
+    long_only = False
+    hybrid_mode = False
     adx_filter = True
     min_adx = 0  # v41
     min_rr_ratio = 0  # v42
+    ml_threshold = ML_THRESHOLD  # v45
 
     args = sys.argv[1:]
     i = 0
@@ -612,11 +876,15 @@ def parse_args():
         elif arg == '--no-adx-filter': adx_filter = False; i += 1
         elif arg == '--min-adx':       min_adx = int(args[i + 1]); i += 2  # v41
         elif arg == '--min-rr':        min_rr_ratio = float(args[i + 1]); i += 2  # v42
+        elif arg == '--ml-threshold':  ml_threshold = float(args[i + 1]); i += 2  # v45
         elif arg == '--years':
             years = int(args[i + 1]); i += 2
         elif arg == '--intraday':  level_mode = 'intraday'; i += 1
         elif arg == '--swing':     level_mode = 'swing'; i += 1
-        elif arg == '--tight':     level_mode = 'intraday_tight'; i += 1
+        elif arg == '--ultra': ultra_mode = True; i += 1
+        elif arg == '--long-only': long_only = True; i += 1
+        elif arg == '--hybrid': hybrid_mode = True; i += 1
+        elif arg == '--multi':       multi_mode = True; i += 1
         elif arg == '--json':      output = 'json'; i += 1
         elif arg == '--stock':
             stocks = [args[i + 1].strip().upper()]; i += 2
@@ -629,12 +897,13 @@ def parse_args():
             i += 1
     if positional:
         stocks = positional
-    return stocks, use_trailing, sector_limits, no_sig_exit, years, output, level_mode, momentum_mode, adx_filter, min_adx, min_rr_ratio
+    return stocks, use_trailing, sector_limits, no_sig_exit, years, output, level_mode, momentum_mode, multi_mode, high_conviction_mode, ultra_mode, long_only, hybrid_mode, adx_filter, min_adx, min_rr_ratio, ml_threshold
 
 
 def main():
     (stocks, use_trailing, sector_limits, no_sig_exit, years,
-     output, level_mode, momentum_mode, adx_filter, min_adx, min_rr_ratio) = parse_args()
+     output, level_mode, momentum_mode, multi_mode, high_conviction_mode, ultra_mode, long_only, hybrid_mode,
+     adx_filter, min_adx, min_rr_ratio, ml_threshold) = parse_args()
     # v14 fix: Use fixed end_date (last completed month) for reproducible backtests.
     # Using dynamic end_date=now causes yfinance to return different prices on each run
     # (last 3 years ending "today" = different window every time) → non-deterministic.
@@ -648,10 +917,13 @@ def main():
     if use_trailing:   flags.append("+TrailingSL")
     if sector_limits:   flags.append("+SectorCap")
     if no_sig_exit:    flags.append("+NoSigExit")
-    if momentum_mode:   flags.append("+MomentumMode")
+    if ultra_mode: flags.append("+Ultra")
+    if long_only: flags.append("+LongOnly")
+    if hybrid_mode: flags.append("+Hybrid")
     if not adx_filter: flags.append("+NoADXFilter")
     if min_adx > 0:    flags.append(f"+MinADX{min_adx}")   # v41
     if min_rr_ratio > 0: flags.append(f"+MinRR{min_rr_ratio}")  # v42
+    if ml_threshold > 0: flags.append(f"+ML{float(ml_threshold):.2f}")  # v45
     flag_str = f" ({', '.join(flags)})" if flags else ""
 
     # Warn: momentum mode without ADX filter may fire in choppy markets
@@ -661,7 +933,7 @@ def main():
         print()
 
     print("=" * 72)
-    print(f"📊 NIFTY BACKTEST v13{flag_str} | {start_date} → {end_date} ({years}y) | {level_mode}")
+    print(f"📊 NIFTY BACKTEST v48{flag_str} | {start_date} → {end_date} ({years}y) | {level_mode}")
     print("=" * 72)
 
     results = []
@@ -676,9 +948,16 @@ def main():
                             verbose=False,
                             level_mode=level_mode,
                             momentum_mode=momentum_mode,
+                            multi_mode=multi_mode,
+                            high_conviction_mode=high_conviction_mode,
+                            ultra_mode=ultra_mode,
+                            long_only=long_only,
+                            hybrid_mode=hybrid_mode,
                             adx_filter=adx_filter,
                             min_adx=min_adx,
-                            min_rr_ratio=min_rr_ratio)  # v42
+                            min_rr_ratio=min_rr_ratio,
+                            ml_threshold=ml_threshold,  # v45
+                            )  # v42
         if res:
             results.append(res)
             if res['trades'] > 0:

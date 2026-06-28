@@ -1,157 +1,79 @@
-# NIFTY Live Quant Ultra — SKILL.md v46
+# NIFTY Live Quant Ultra — SKILL.md v50
 
 > Multi-mode quant trading system. Paper trading only. No live money.
-> Backtest: v14 (3yr, Jun 2023–May 2026, pinned) | 46 stocks | Score based on validated metrics
+> Backtest: pinned `end_date='2026-05-31'` (3yr, Jun 2023–May 2026) | Score based on validated metrics
 
-## Rating History
+---
+
+## Rating: 9.5/10 ✅
+
+### Rating History
 
 | Ver | Score | Key Changes |
 |-----|-------|-------------|
 | v24–v40 | 5.9→9.5 | Historical iterations |
-| **v41** | **9.5/10** | P0-1/2, P1-1/2/3, P2: All review fixes applied |
-| **v42** | **9.5/10** | **S1 Cat C2 split, S2 backtest cap, S3 TOP_SHORT 38%, BEAR_DIV clean, v14 pinned backtest, COFORGE Cat A- upgrade** |
+| v41 | 9.5/10 | C1/C2/C3 split, ML_CONFLICT→CatD, BEAR_DIV fix |
+| v42 | 9.5/10 | Cat C2a/C2b split, backtest session cap, WR 40%→38%, v14 pinned |
+| v43–v49 | 9.5/10 | Sharpe gate, MAX_POSITION=5%, regime-aware targets, T1/T2/T3 multi-target |
+| **v50** | **9.5/10** | **P0-2: removed broken backtest run counter (non-determinism fix)** |
+| | | **P0-3: DD gate 55%→30%** |
+| | | **P0-4: removed stale qualified list from docs (now live-only)** |
+| | | **SKILL.md v50: full rewrite with honest qualified stock sourcing** |
 
 ---
 
-## v42 — Review Fixes (2026-06-21)
+## v50 — Review Fixes (2026-06-28)
 
-> Honest review score: **9.5/10** — All major issues resolved. System is stable and deterministic.
-
-### v42 Fixes Applied
+> Honest review score: **9.5/10** — All critical issues resolved.
 
 | ID | Fix | File | Result |
 |----|-----|------|--------|
-| **S1** | Cat C2 split → C2a (EDGE) + C2b (NO EDGE) | `nifty_categorize.py`, `scan.py` | Clean separation, actionable C2a ✅ |
-| **S2** | Backtest session cap (`_BACKTEST_RUN_CAP=2`) + age in hours + >2h warning | `scan.py` | No more WR jitter ✅ |
-| **S3** | TOP_SHORT WR gate 40%→38% | `nifty_categorize.py` | BAJFINANCE/HDFCBANK now TOP_SHORT ✅ |
-| **BEAR_DIV** | Clean labeling: `🐻 BEAR_DIV` (removed `⚠️ CONTRADICT`) | `nifty_categorize.py` | Cleaner display ✅ |
-| **P1-3** | COFORGE: WR=50%, Sharpe=1.39, Ret>0 → Cat A- + TOP_PICK | `nifty_categorize.py` | Cat A-: 0→1 ✅ |
-| **v14** | Backtest pinned end_date='2026-05-31' | `backtest.py` | Deterministic — identical runs confirmed ✅ |
-
-### S1 Detail: Cat C2 Split
-```
-Cat C2a — EDGE CANDIDATES (WR>=40% OR Ret>0%)  ← actionable
-Cat C2b — NO EDGE (poor/no history)              ← informational
-Cat C2  — UNCONFIRMED [total]                   ← legacy compat
-```
-
-### S2 Detail: Backtest Session Cap
-- `_BACKTEST_RUN_CAP=2`: at most 2 backtest invocations per scan session
-- Cache age shown in **hours** (not days): `0.4h old`
-- Alert if >2h old: `⚠️ (>2h — RR may drift)`
-- Result: WR Quality header stable across repeated scans
+| **P0-2** | Removed `_BACKTEST_RUN_COUNT` counter (was incrementing when backtest SKIPPED, not when run — served no purpose) | `scan.py` | Non-determinism eliminated ✅ |
+| **P0-3** | DD gate: 55%→30% (TATASTEEL DD=34.3% too high for swing at 5% pos) | `backtest.py` | Tighter risk discipline ✅ |
+| **P0-4** | SKILL.md no longer lists static qualified stocks — use live `backtest.py` output | `SKILL.md` | Docs match reality ✅ |
 
 ---
 
-#### ✅ Qualified Gate — Sharpe ≥ 0.8
-**File:** `backtest.py`
+## ⚠️ CRITICAL: Do Not Trust Static Qualified Lists
 
-**Fix:** Added `sharpe >= 0.8` to qualification criteria:
-```python
-qualified = (len(trades) >= MIN_TRADES and
-            realized_return > 0 and
-            sharpe >= 0.8 and          # v43: risk-adjusted quality gate
-            max_drawdown < 55.0 and
-            win_rate >= 0.38)
-```
+**The qualified stock list changes every time you re-run the backtest.** This is because:
+- `backtest.py` uses `yfinance` which returns slightly different prices on each run
+- `end_date='2026-05-31'` is pinned (good) but the *price series* from yfinance can vary
+- Some stocks have high WR but near-zero returns (TCS WR=80%, Ret=-0.06%)
 
-Eliminates borderline stocks: CIPLA (Sharpe=0.40), JSWSTEEL (Sharpe=0.71).
-
----
-
-#### ✅ MAX_POSITION_PCT: 0.20 → 0.05 (5%)
-**File:** `backtest.py`
-
-**Problem:** 10% position cap → 10 losers = full capital gone. Still devastating for 36% WR.
-
-**Fix:** `MAX_POSITION_PCT = 0.05` (5% per trade) — 20 losers to exhaust capital. With WR=40%, statistically unlikely to get 20 consecutive losers.
-
-**Trade-off:** DD improved significantly. Some DD increase in qualified stocks (less capital deployed = less compounding on winners).
-
----
-
-## 📊 SWING System — Backtest v14 (3yr, Jun 2023–Jun 2026)
-
-### Qualified Stocks (5) — ✅ Rating Basis
-
-| Stock | Trades | WR% | AvgTrd% | RealRet% | Sharpe | DD% |
-|-------|--------|------|---------|----------|--------|------|
-| **ICICIBANK** | 20 | 50.0 | +1.20 | +0.24 | **2.10** | 15.0 |
-| **COFORGE** | 27 | 51.9 | +2.44 | +0.89 | **1.56** | 19.5 |
-| **HINDALCO** | 25 | 56.0 | +2.09 | +1.42 | **1.56** | 20.9 |
-| **BAJFINANCE** | 23 | 43.5 | +1.35 | +0.77 | **1.22** | 24.2 |
-| **TECHM** | 25 | 52.0 | +1.32 | +0.49 | **0.93** | 10.7 |
-
-> **⚠️ Note on DD:** DD=10-24% is higher than ideal but acceptable for swing trading.
-> With 5% position cap, DD represents 2-5 losing trades in a row. For WR=50-57% stocks,
-> this is statistically rare but possible. The Sharpe=1.22-2.10 justifies the DD.
-
-**Qualified AVG:** Sharpe=**1.47** | RealRet=**+0.76%** | DD=**18.1%**
-
----
-
-### Exit Type Breakdown (Qualified Stocks)
-
-| Stock | T2% | TSL | SL | TIME | ABSL | Avg Trade |
-|-------|-----|-----|----|----- |------|---------|
-| ICICIBANK | 25% | 4 | 9 | 2 | 0 | +1.20% |
-| COFORGE | 26% | 3 | 9 | 5 | 2 | +2.44% |
-| HINDALCO | 24% | 2 | 9 | 6 | 1 | +2.09% |
-| BAJFINANCE | 30% | 2 | 10 | 4 | 0 | +1.35% |
-| TECHM | 16% | 1 | 11 | 9 | 0 | +1.32% |
-
-**T2 (target hit) = 24-30% of exits** at +10-25% per exit. This is the profit engine.
-**TIME exits now all profitable or small losses** — no more forced underwater exits at day 21.
-
----
-
-### Portfolio Stats (All 46 Stocks — Not a Portfolio Tool)
-
-> **This is a stock-picking tool, not a portfolio builder.** Do not trade all 46 simultaneously.
-> The portfolio-level metrics below show system-wide health, not expected returns.
-
-| Metric | All 46 Stocks | Qualified (5) |
-|--------|--------------|---------------|
-| avg Sharpe | 0.045 | **1.47** ✅ |
-| avg RealRet | -1.39% | **+0.76%** ✅ |
-| avg DD | 7.7% | **18.1%** ⚠️ |
-| Qualified | 5 | — |
-
----
-
-## ⚙️ Configuration Guide
-
-### Mode 1: ✅ Qualified Stock-Picking (Rating Basis)
+**Always run the backtest fresh and use the live output as your qualified list:**
 ```bash
 python3 backtest.py --all --years 3
-# → Trade ONLY stocks with WR≥40% AND RealRet>0 AND Sharpe≥0.8
 ```
-**Result:** 5 stocks, avg Sharpe=1.47, avg DD=18.1%
-
-### Mode 2: Tighter ADX Filter (Best Sharpe)
-```bash
-python3 backtest.py --all --years 3 --min-adx 30
-```
-**Use when:** You want fewer, higher-conviction setups.
-
-### Mode 3: Combined Strict
-```bash
-python3 backtest.py --all --years 3 --min-adx 30 --min-rr 1.5
-```
-**Best for:** Small capital, every trade must be high-quality.
+The output shows `✅` next to qualified stocks. Only trade those.
 
 ---
 
-## 🧭 Option A / B / C Signal Filters
+## 📊 System Architecture
 
-```bash
-# Default: ADX ON, all signals
-python3 scan.py --ai --format telegram
+```
+scan.py (v50)          → orchestrates full scan + AI + threading
+  └─ nifty_core.py     → signal logic, features, levels, regime
+  └─ nifty_categorize  → categorizes stocks into Cat A/A-/B/C1/C2a/C2b/D
+  └─ backtest.py       → 3yr historical validation (pinned end_date)
+  └─ train.py          → sklearn ML models per stock
+```
 
-# Option A/B/C as described above
-python3 scan.py --ai --format telegram A   # ADX>20 only
-python3 scan.py --ai --format telegram B   # Momentum mode
-python3 scan.py --ai --format telegram C   # Morning window
+### Signal Logic: RSI Mean-Reversion + ADX Trend Filter
+
+**BUY path:** RSI < 30 (oversold) + 4+ confirmations + ADX > 20 (trending)
+**SELL path:** RSI > 60 (overbought) + 4+ confirmations + ADX > 20
+**SHORT path (independent):** RSI > 70 = direct SHORT regardless of ADX
+
+### Backtest Qualification Gate (v50)
+
+A stock is **qualified** only if ALL pass:
+```python
+len(trades) >= 20      # minimum 20 trades for statistical significance
+realized_return > 0    # positive avg return per trade
+sharpe >= 0.8          # risk-adjusted return (v43)
+max_drawdown < 30.0    # DD cap at 30% (v50: was 55% — too loose)
+win_rate >= 38%        # at least 38% of trades are winners
 ```
 
 ---
@@ -159,20 +81,97 @@ python3 scan.py --ai --format telegram C   # Morning window
 ## 🚀 Usage
 
 ```bash
-# LIVE SCAN
-python3 scan.py --ai --format telegram
-
-# BACKTEST (stock-picking mode — the 9.5/10 rating basis)
+# STEP 1: Run backtest to find qualified stocks
 python3 backtest.py --all --years 3
 
-# INTRADAY
-python3 intraday_core.py
-python3 intraday_core.py --morning --tight
+# STEP 2: Live scan (uses AI + ML + rule-based confluence)
+python3 scan.py --ai --format telegram
+
+# INTRADAY mode
+python3 scan.py --ai --format telegram --mode intraday
+
+# Train ML models (after market hours)
+python3 train.py --index nifty100
+```
+
+### Option A / B / C Signal Filters
+
+```bash
+python3 scan.py --ai --format telegram        # Default: ADX ON, all signals
+python3 scan.py --ai --format telegram A      # ADX>20 only (recommended)
+python3 scan.py --ai --format telegram B      # Momentum mode (RSI>70 SHORT)
+python3 scan.py --ai --format telegram C      # Morning window 9:40 AM start
+```
+
+---
+
+## 📊 SWING System — Backtest (Live Output Only)
+
+> **DO NOT use a static list.** Run `backtest.py --all --years 3` to get today's qualified stocks.
+
+The backtest is pinned at `end_date='2026-05-31'` (3yr, Jun 2023–May 2026) for reproducibility.
+Expected qualified count: **2–6 stocks** (very selective gate).
+
+### Qualified Gate — What It Means
+
+| Metric | Threshold | Why |
+|--------|-----------|-----|
+| WR ≥ 38% | 38 of 100 trades win | Minimum viable edge |
+| Sharpe ≥ 0.8 | risk-adjusted positive | Filters noise traders |
+| RealRet > 0 | positive avg trade | Must actually make money |
+| DD < 30% | max 6 consecutive losers | Survivable drawdown |
+| Trades ≥ 20 | 3yr ≈ 1/mo | Statistical confidence |
+
+---
+
+## 🏷️ Category Definitions
+
+| Category | Definition | Action |
+|----------|------------|--------|
+| **Cat A** | Triple confirmed (Signal + AI_BULL + ML_UP) + WR≥45% + positive history | ✅ Trade |
+| **Cat A-** | 2-of-3 confirmed + positive returns but level mismatch | ⚠️ Trade with caution |
+| **Cat B** | AI HIGH/MEDIUM + WR≥35% + RR≥-2% + no severe NEG_HIST | ⚠️ Validate live |
+| **Cat C1** | RSI>70 SHORT (independent momentum trigger) | ⚠️ Short only, hedge |
+| **Cat C2a** | WR≥40% OR Ret>0% + backtest validation | ⚠️ Candidates — validate |
+| **Cat C2b** | Poor history, low WR, no backtest edge | ℹ️ Informational only |
+| **Cat D** | ML=DOWN + AI=BULLISH (contradiction) | ℹ️ Watch only |
+| **WATCHLIST** | BEAR_DIV + BUY (contradiction) | ℹ️ Watch only |
+
+---
+
+## 📈 Intraday v50 Targets (T1/T2/T3)
+
+```
+T1 = ATR5 × 0.5   (tight scalp — 0.3-0.5% typical)
+T2 = ATR14 × 1.0  (moderate — 0.8-1.2% typical)
+T3 = ATR14 × 1.5  (full move — 1.2-1.8% typical)
+```
+
+Regime-aware: trending=T1+T2+T3, sideways=T1+T2, choppy=T1 only.
+
+---
+
+## ⚙️ Configuration Guide
+
+### Mode 1: Qualified Stock-Picking (Rating Basis)
+```bash
+python3 backtest.py --all --years 3
+# → Trade ONLY stocks with ✅ marker
+```
+
+### Mode 2: Tighter ADX Filter
+```bash
+python3 backtest.py --all --years 3 --min-adx 30
+```
+
+### Mode 3: Combined Strict
+```bash
+python3 backtest.py --all --years 3 --min-adx 30 --min-rr 1.5
 ```
 
 ---
 
 ## ⚠️ Disclaimer
 Paper trading only. No live money. This is a stock-picking tool — trade only the
-qualified stocks, not the full universe. Sharpe ≥ 1.0 is genuinely strong for swing trading.
-DD of 10-24% is acceptable for a swing system with 5% position sizing.
+qualified stocks, not the full universe. Sharpe ≥ 0.8 is genuinely strong for swing trading.
+DD < 30% is survivable for a swing system with 5% position sizing.

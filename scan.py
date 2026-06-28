@@ -270,7 +270,7 @@ def get_level_modes_extended(price, atr, atr5=None, entry_price=None, signal=Non
     }
 
 # ─── Analyze Single Stock ──────────────────────────────────────────────────
-def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, level_mode='intraday', auto_retrain=False, momentum_mode=False):
+def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, level_mode='intraday', auto_retrain=False, momentum_mode=False, high_conviction_mode=False):
     price, prev = get_price(sym)
     df = get_ohlc(sym)
     if df is None or price is None or len(df) < 200:
@@ -316,7 +316,7 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     elif di_minus > di_plus: condition = 'BEAR_RALLY'
     else: condition = 'NEUTRAL'
 
-    sig_val, meta, _ = core_get_signal(df, len(df) - 1, momentum_mode=momentum_mode)
+    sig_val, meta, _ = core_get_signal(df, len(df) - 1, momentum_mode=momentum_mode, high_conviction_mode=high_conviction_mode)
     signal = meta['signal']
     divergence = meta.get('divergence')
 
@@ -353,9 +353,10 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     # Load backtest stats (v18: needed for NEG_HIST and WR threshold checks)
     stats = _get_stats(sym)
 
-    # ── WR ≥ 75% Gate: only show BUY/SELL for high-conviction stocks ──
-    # v51: Subhash request — only trade stocks with WR >= 75% (extreme edge filter)
-    WR_HIGH_THRESHOLD = 75
+    # ── WR Gate: only show BUY/SELL for high-conviction stocks ──
+    # v52: HC mode + backtest data shows 55% is statistically achievable with 20+ trades
+    # (75% needs 15/15 wins — mathematically nearly impossible for a mean-reversion strategy)
+    WR_HIGH_THRESHOLD = 55 if high_conviction_mode else 75
     stats_wr = stats.get('win_rate', 0)
     wr_gate_tags = []
     if signal in ('BUY', 'SELL') and stats_wr < WR_HIGH_THRESHOLD:
@@ -395,6 +396,7 @@ def parse_args():
     use_ai = False
     use_trailing = False
     momentum_mode = False   # v34: Option B — RSI>70/<30 momentum mode
+    high_conviction_mode = False  # v52: HC signal mode
     adx_filter = True     # v34: Option A — ADX>25 filter (default ON)
     sector_cap = False
     fundamental_filter = False
@@ -431,6 +433,7 @@ def parse_args():
             adx_filter = False; i += 1
         elif arg == '--momentum-mode':
             momentum_mode = True; i += 1
+        elif arg == '--hc':   high_conviction_mode = True; i += 1  # v52
         elif arg == '--sector-cap':
             sector_cap = True; i += 1
         elif arg == '--fundamentals':
@@ -511,7 +514,7 @@ def parse_args():
     if index_override:
         stocks = index_override
 
-    return stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, _MAX_POS_PCT_OVERRIDE, stream_output
+    return stocks, use_ai, use_trailing, momentum_mode, high_conviction_mode, sector_cap, fundamental_filter, output_format, level_mode, top_n, auto_retrain, filter_neg_hist, backtest_first, conversation_label, debug_mode, wait_morning, _MAX_POS_PCT_OVERRIDE, stream_output
 
 # ─── Telegram Format (v17: Cat C split, SWING-first in BULLISH, tags shown) ──
 def format_telegram(results, today, top_n=None, conversation_label=None, max_pos_pct=None, level_mode='swing', choppy=False):
@@ -1081,7 +1084,7 @@ def format_json(results, today):
 
 # ─── Main ───────────────────────────────────────────────────────────────────
 def main():
-    (stocks, use_ai, use_trailing, momentum_mode, sector_cap, fundamental_filter,
+    (stocks, use_ai, use_trailing, momentum_mode, high_conviction_mode, sector_cap, fundamental_filter,
      output_format, level_mode, top_n, auto_retrain,
      filter_neg_hist, backtest_first, conversation_label, debug_mode,
      wait_morning, max_pos_pct, stream_output) = parse_args()
@@ -1139,7 +1142,8 @@ def main():
         r = analyze(sym, use_ai=use_ai, use_trailing=use_trailing,
                     fundamental_filter=fundamental_filter,
                     level_mode=level_mode, auto_retrain=auto_retrain,
-                    momentum_mode=momentum_mode)
+                    momentum_mode=momentum_mode,
+                    high_conviction_mode=high_conviction_mode)
         return sym, r
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as _executor:

@@ -883,6 +883,66 @@ def _get_ultra_signal(df, i, adx, adx_trending):
                'adx': round(adx, 1), 'adx_trending': adx_trending}, []
 
 
+def _get_high_conviction_signal(df, i, adx, adx_trending):
+    """v47 High Conviction Signal — WR > 70% target.
+    
+    BUY: RSI<32 + vol>1.4× + ADX>30 + MACD>+0 + near 20-day support
+    SELL: RSI>68 + vol>1.4× + ADX>30 + MACD<0 + near 20-day resistance
+    
+    Fewer signals, but much higher win rate.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    vol_ratio = float(row.get('vol_ratio', 1))
+    macd = float(row.get('macd', 0))
+    macd_sig = float(row.get('macd_sig', 0))
+    macd_hist = macd - macd_sig
+    low_20 = df['Low'].iloc[max(0, i-20):i+1].min()
+    high_20 = df['High'].iloc[max(0, i-20):i+1].max()
+    hc = HIGH_CONVICTION_CONFIG
+
+    cond_rsi    = rsi < hc['rsi_buy_max']   # RSI < 40
+    cond_vol    = vol_ratio > hc['vol_min']        # vol > 1.1×
+    cond_adx    = adx > hc['adx_min']             # ADX > 25
+    cond_macd   = macd_hist > 0                   # MACD turning up
+    cond_supp   = (price - low_20) / price < 0.03 # within 3% of 20-day low
+
+    buy_conds = [cond_rsi, cond_vol, cond_adx, cond_macd, cond_supp]
+    buy_count = sum(buy_conds)
+    if buy_count >= hc['min_conditions']:
+        reasons = [
+            f"📈 HIGH CONVICTION BUY | {buy_count}/5 conds | RSI={rsi:.0f}<{hc['rsi_buy_max']} | vol={vol_ratio:.1f}× | ADX={adx:.0f}>{hc['adx_min']} | MACD={macd_hist:+.2f}",
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': buy_count, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HIGH_CONVICTION'}, []
+
+    # ── SELL: 3 of 5 conditions ───────────────────────────────────────────
+    cond_rsi_s  = rsi > hc['rsi_sell_min']  # RSI > 60
+    cond_macd_s = macd_hist < 0              # MACD turning down
+    cond_res    = (high_20 - price) / price < 0.03  # within 3% of 20-day high
+
+    sell_conds = [cond_rsi_s, cond_vol, cond_adx, cond_macd_s, cond_res]
+    sell_count = sum(sell_conds)
+    if sell_count >= hc['min_conditions']:
+        reasons = [
+            f"📉 HIGH CONVICTION SELL | {sell_count}/5 conds | RSI={rsi:.0f}>{hc['rsi_sell_min']} | vol={vol_ratio:.1f}× | ADX={adx:.0f}>{hc['adx_min']} | MACD={macd_hist:+.2f}",
+        ]
+        return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': sell_count,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HIGH_CONVICTION'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': buy_count, 'sell_cnt': sell_count,
+               'divergence': None,
+               'reasons': [f"HIGH_CONVICTION: {buy_count}/5 BUY conds, {sell_count}/5 SELL conds (need {hc['min_conditions']})"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+
+def _get_hybrid_signal(df, i, adx, adx_trending):
     """v49 Hybrid: HC Long-Only + Ichimoku confirmations.
     
     BUY: 3+ HC conditions (RSI<40, vol>1.1, ADX>25, MACD>0, near_support)
@@ -940,6 +1000,70 @@ def _get_ultra_signal(df, i, adx, adx_trending):
 
 
 
+def _get_hybrid_signal(df, i, adx, adx_trending):
+    """v49 Hybrid: HC Long-Only + Ichimoku confirmations.
+    
+    BUY: 3+ HC conditions (RSI<40, vol>1.1, ADX>25, MACD>0, near_support)
+          PLUS 1+ Ichimoku: cloud_green OR TK cross
+    This is the STRICTEST mode — intersection of HC momentum + Ichimoku trend.
+    """
+    row = df.iloc[i]
+    price = float(row['Close'])
+    rsi = float(row['rsi'])
+    vol_ratio = float(row.get('vol_ratio', 1))
+    macd = float(row.get('macd', 0))
+    macd_sig = float(row.get('macd_sig', 0))
+    macd_hist = macd - macd_sig
+    low_20 = df['Low'].iloc[max(0, i-20):i+1].min()
+    high_20 = df['High'].iloc[max(0, i-20):i+1].max()
+    cg = float(row.get('cloud_green', 0))
+    pvc = float(row.get('price_vs_cloud', 0.5))
+    tenkan = float(row.get('tenkan', price))
+    kijun = float(row.get('kijun', price))
+    stoch = float(row.get('stoch_rsi', 50))
+    cci = float(row.get('cci', 0))
+
+    # TK cross
+    tk_buy_cross = False
+    if i > 0:
+        tk_prev = float(df['tenkan'].iloc[i-1])
+        kj_prev = float(df['kijun'].iloc[i-1])
+        tk_buy_cross = (tenkan > kijun) and (tk_prev <= kj_prev)
+
+    # HC conditions
+    cond_rsi   = rsi < 40
+    cond_vol   = vol_ratio > 1.1
+    cond_adx   = adx > 25
+    cond_macd  = macd_hist > 0
+    cond_supp  = (price - low_20) / price < 0.03
+    hc_conds = [cond_rsi, cond_vol, cond_adx, cond_macd, cond_supp]
+    hc_count = sum(hc_conds)
+
+    # Ichimoku conditions
+    cond_cloud = cg >= 1        # bullish cloud
+    cond_tk    = tk_buy_cross   # TK bullish cross
+    cond_stoch = stoch < 30     # StochRSI oversold
+    cond_cci   = cci < -80      # CCI oversold
+    ich_conds = [cond_cloud, cond_tk, cond_stoch, cond_cci]
+    ich_count = sum(ich_conds)
+
+    # BUY: need 3+ HC conditions AND 1+ Ichimoku confirmation
+    if hc_count >= 3 and (ich_count >= 1):
+        reasons = [
+            f"📈 HYBRID BUY | HC:{hc_count}/5 + Ichimoku:{ich_count}/4 | RSI={rsi:.0f}<40 | vol={vol_ratio:.1f}× | ADX={adx:.0f}>25 | MACD={macd_hist:+.2f} | cloud={'G' if cond_cloud else 'R'} TK={'T' if cond_tk else 'F'} stoch={stoch:.0f} cci={cci:.0f}"
+        ]
+        return 1, {'signal': 'BUY', 'buy_cnt': hc_count, 'sell_cnt': 0,
+                   'divergence': None, 'reasons': reasons,
+                   'adx': round(adx, 1), 'adx_trending': adx_trending,
+                   'mode': 'HYBRID'}, []
+
+    return 0, {'signal': 'RANGE', 'buy_cnt': hc_count, 'sell_cnt': ich_count,
+               'divergence': None,
+               'reasons': [f"Hybrid: HC:{hc_count}/5, Ichimoku:{ich_count}/4 (need 3+HC + 1+Ich)"],
+               'adx': round(adx, 1), 'adx_trending': adx_trending}, []
+
+
+def _get_multi_factor_signal(df, i, adx, adx_trending):
 
     """v45 Multi-Factor Signal — requires 4 of 6 conditions (core RSI + ADX + 2 of 4 extras).
     

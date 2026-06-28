@@ -885,6 +885,7 @@ def parse_args():
         elif arg == '--long-only': long_only = True; i += 1
         elif arg == '--hybrid': hybrid_mode = True; i += 1
         elif arg == '--multi':       multi_mode = True; i += 1
+        elif arg == '--hc':   high_conviction_mode = True; i += 1  # v52: HC signal mode
         elif arg == '--json':      output = 'json'; i += 1
         elif arg == '--stock':
             stocks = [args[i + 1].strip().upper()]; i += 2
@@ -897,6 +898,10 @@ def parse_args():
             i += 1
     if positional:
         stocks = positional
+    # v52: In HC mode, disable ML filter (pure indicator alignment)
+    if high_conviction_mode:
+        ml_threshold = 0.0  # no ML filter in HC mode
+
     return stocks, use_trailing, sector_limits, no_sig_exit, years, output, level_mode, momentum_mode, multi_mode, high_conviction_mode, ultra_mode, long_only, hybrid_mode, adx_filter, min_adx, min_rr_ratio, ml_threshold
 
 
@@ -924,6 +929,7 @@ def main():
     if min_adx > 0:    flags.append(f"+MinADX{min_adx}")   # v41
     if min_rr_ratio > 0: flags.append(f"+MinRR{min_rr_ratio}")  # v42
     if ml_threshold > 0: flags.append(f"+ML{float(ml_threshold):.2f}")  # v45
+    if high_conviction_mode: flags.append("+HC")  # v52
     flag_str = f" ({', '.join(flags)})" if flags else ""
 
     # Warn: momentum mode without ADX filter may fire in choppy markets

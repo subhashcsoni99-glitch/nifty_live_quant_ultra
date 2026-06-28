@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NIFTY Scanner v50 - Unified Rule-Based + AI (9-stage) + ML
+NIFTY Scanner v51 - Unified Rule-Based + AI (9-stage) + ML
 
 v25 UPGRADE (achieving 9.5/10 rating):
   1. WR badge: 🟢 >50% | 🟡 40-50% | 🔴 <40% on every stock line
@@ -353,6 +353,16 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
     # Load backtest stats (v18: needed for NEG_HIST and WR threshold checks)
     stats = _get_stats(sym)
 
+    # ── WR ≥ 75% Gate: only show BUY/SELL for high-conviction stocks ──
+    # v51: Subhash request — only trade stocks with WR >= 75% (extreme edge filter)
+    WR_HIGH_THRESHOLD = 75
+    stats_wr = stats.get('win_rate', 0)
+    wr_gate_tags = []
+    if signal in ('BUY', 'SELL') and stats_wr < WR_HIGH_THRESHOLD:
+        wr_gate_tags.append(f'⚠️ WR_LOW({stats_wr:.0f}%<{WR_HIGH_THRESHOLD}%)')
+        signal = 'RANGE'
+        prob = max(prob_buy, prob_sell)  # downgrade to neutral confidence
+
     return {
         'symbol': sym, 'price': price, 'prev': prev,
         'rsi': round(rsi, 1), 'change': round(change_pct, 2),
@@ -367,7 +377,7 @@ def analyze(sym, use_ai=False, use_trailing=False, fundamental_filter=False, lev
         'divergence': divergence, 'reasons': reasons,
         'atr': round(atr, 2), 'atr5': round(atr5, 2), 'vol_ratio': round(vol_ratio, 2), 'ret5': round(ret5 * 100, 2),
         'pos_size': pos['shares'], 'pos_value': pos['position_value'], 'pos_pct': pos_pct,
-        'ai': ai, 'ml': ml, 'hourly': hourly, 'tags': [],
+        'ai': ai, 'ml': ml, 'hourly': hourly, 'tags': wr_gate_tags,
         '_stats': stats,
         'today_open': today_open,   # v47: today's open for gap-aware intraday targets
         'signal_age_days': round(signal_age_days, 1) if signal_age_days else 0.0,

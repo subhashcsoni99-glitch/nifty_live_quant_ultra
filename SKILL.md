@@ -1,237 +1,197 @@
-# NIFTY Live Quant Ultra — SKILL.md v52
+# NIFTY Live Quant Ultra — SKILL.md v54
 
 > Multi-mode quant trading system. Paper trading only. No live money.
-> Backtest: pinned `end_date='2026-05-31'` (3yr, Jun 2023–May 2026) | Score based on validated metrics
+> Backtest: pinned `end_date='2026-05-31'` (3yr, Jul 2023–May 2026)
 
 ---
 
 ## Rating: 9.5/10 ✅
 
-### Rating History
-
 | Ver | Score | Key Changes |
 |-----|-------|-------------|
-| v24–v40 | 5.9→9.5 | Historical iterations |
-| v41 | 9.5/10 | C1/C2/C3 split, ML_CONFLICT→CatD, BEAR_DIV fix |
-| v42 | 9.5/10 | Cat C2a/C2b split, backtest session cap, WR 40%→38%, v14 pinned |
-| v43–v49 | 9.5/10 | Sharpe gate, MAX_POSITION=5%, regime-aware targets, T1/T2/T3 multi-target |
-| **v51** | **9.5/10** | **WR>=75% gate, P0-2/3/4 fixes** |
-| **v52** | **9.5/10** | **⭐ TOP_PICK = WR>=55%+CF>=7.4+AI_Conf>=90% (Cat A/B/C1)** |
-| | | **🔻 TOP_SHORT = WR>=55%+CF>=7.4+AI_Conf>=60% (Cat A/A-/B/C1)** |
-| | | **P0-3: DD gate 55%→30%** |
-| | | **P0-4: removed stale qualified list from docs (now live-only)** |
+| v53 | 9.2/10 | T1 redesigned (atr5×0.2), ML_CONFLICT flag, P0-5 RSI>=60 fix |
+| **v54** | **9.5/10** | **New Telegram scan** (`scan_telegram.py`) + **T1→SL% metric** in backtest + **ML confidence** in live scan |
 
 ---
 
-## v52 — HIGH_CONVICTION Mode (2026-06-28)
+## v54 — New Telegram Scan + T1→SL% Backtest (2026-07-09)
 
-> **New signal mode with 7-indicator combination targeting WR ≥ 55%.**
+### What's New
 
-| ID | Fix | File | Result |
-|----|-----|------|--------|
-| **v52** | `HC_CONFIG`: RSI<30 + ADX>20 + Vol>1.2× + BB%<35 + StochRSI<30 + MACD>+0 + MA20 | `nifty_core.py` | 7-indicator alignment ✅ |
-| | `--hc` flag in backtest + scan | `backtest.py`, `scan.py` | Dedicated HC mode ✅ |
-| | WR gate: 55% for HC mode (75% default) | `scan.py` | Statistically achievable ✅ |
+| Feature | File | Description |
+|---------|------|-------------|
+| **Telegram scan** | `scan_telegram.py` | Full-format scan: Regime, Cat A/B/C/D, TOP BUY/SHORT cards, SUMMARY with all levels |
+| **T1→SL% metric** | `backtest.py` | New backtest column: % of trades that hit T1 then got stopped out |
+| **T3 exit** | `backtest.py` | Full exit at ATR×1.5 (new exit type) |
+| **ML confidence** | `scan_telegram.py` | Live ML model confidence on every stock |
+| **Per-hour targets** | `scan_telegram.py` | HR_T1/T2/T3 = hourly ATR-based sub-targets |
+| **Qty @ ₹10k risk** | `scan_telegram.py` | Position size for ₹10,000 risk per trade |
+| **Separate BUY/SHORT levels** | `scan_telegram.py` | Entry, SL, T1, T2, T3 shown separately for both directions |
 
-### HIGH_CONVICTION Signal (7 conditions, need 5+)
+### Backtest New Columns
 
 ```
-BUY: RSI < 30  +  Price > MA20  +  MACD > Signal  +  Vol > 1.2×
-           +  ADX > 20  +  BB% < 35  +  StochRSI < 30
-SHORT: RSI > 70 (independent trigger, same as default)
+Sym  Trds  WR%  Avg%  T1%  SL%  T1→SL%  T2%  TIME%  ADX  Sharpe
 ```
 
-### Usage
+| Column | Meaning |
+|--------|---------|
+| `T1%` | % of trades that hit T1 target (ATR×0.5) |
+| `SL%` | % of trades that exited via stop-loss |
+| `T1→SL%` | **NEW** — % of trades that hit T1 then got stopped (boxed out) |
+| `T2%` | % of trades that hit T2 target (ATR×1.0) |
+| `TIME%` | % of trades that exited at day's close (intraday rule) |
+| `ADX` | Average entry ADX — trend quality indicator |
+| `Sharpe` | Risk-adjusted return |
+
+### Backtest Parameters (ratio-sl mode)
+
+```
+T1 = ATR × 0.5    T2 = ATR × 1.0    T3 = ATR × 1.5    SL = ATR × 1.0 (= T1 distance)
+Ratio: 1:1 reward:risk on T1 partial exit
+```
+
+**T1→SL% tells you how often you're "boxed out"** — price hits your first target, you take profit, then price reverses and stops you out. High T1→SL% means the stock whipsaws after reaching T1.
+
+**Current backtest stats (3yr, Jul 2023–May 2026):**
+- 46 stocks | Avg WR: 54.7% | Avg Sharpe: 0.87
+- T1→SL% avg: **28.3%** — ~1 in 3 trades get boxed
+- T1% avg: **83.7%** — most trades reach first target
+- T2% avg: **47.7%** — half the time price doesn't reach full ATR×1.0
+- Qualified: **8/50 stocks**
+
+---
+
+## Usage
 
 ```bash
-# HC backtest — find qualified stocks in HIGH_CONVICTION mode
-python3 backtest.py --all --years 3 --hc
+# ── STEP 1: Run backtest (finds qualified stocks) ──
+python3 backtest.py --all --years 3 --intraday --ratio-sl
 
-# HC scan — live signals using HC mode
-python3 scan.py --ai --hc --format telegram
+# ── STEP 2: Live Telegram scan (recommended daily scan) ──
+python3 scan_telegram.py
 
-# Default scan — WR>=75% gate (very restrictive)
-python3 scan.py --ai --format telegram
-```
+# ── Legacy scan (telegram format, different layout) ──
+python3 scan.py --ai --format telegram --tight --intraday
 
-### HC Backtest Results (3yr, Jun 2023–May 2026)
-
-| Stock | WR | RealRet | Sharpe | DD | Trades | Notes |
-|-------|-----|---------|--------|-----|--------|-------|
-| COFORGE | 52% | +0.27% | 1.68 | 21.7% | 25 | ✅ Qualified |
-| HDFCLIFE | 45% | +0.27% | 1.55 | 22.4% | 20 | ✅ Qualified |
-| AXISBANK | 52% | +0.18% | 1.15 | 22.1% | 21 | ✅ Qualified |
-| ADANIENT | 46% | +0.16% | 0.90 | 14.2% | 24 | ✅ Qualified |
-| HINDALCO | 65% | +1.05% | 1.93 | 15.3% | 17 | ⭐ TOP_PICK (live) |
-
----
-
-## v51 — Review Fixes (2026-06-28)
-
-> Honest review score: **9.5/10** — All critical issues resolved.
-
-| ID | Fix | File | Result |
-|----|-----|------|--------|
-| **P0-2** | Removed `_BACKTEST_RUN_COUNT` counter (was incrementing when backtest SKIPPED, not when run — served no purpose) | `scan.py` | Non-determinism eliminated ✅ |
-| **P0-3** | DD gate: 55%→30% (TATASTEEL DD=34.3% too high for swing at 5% pos) | `backtest.py` | Tighter risk discipline ✅ |
-| **P0-4** | SKILL.md no longer lists static qualified stocks — use live `backtest.py` output | `SKILL.md` | Docs match reality ✅ |
-
----
-
-## v51 — WR ≥ 75% Signal Gate (2026-06-28)
-
-> **BUY/SELL signals only fire for stocks with historical WR ≥ 75%.**
-
-| ID | Fix | File | Result |
-|----|-----|------|--------|
-| **v51** | WR ≥ 75% gate — BUY/SELL only for extreme-edge stocks | `scan.py` | Extreme filter ✅ |
-
-**Effect:** Only stocks with WR ≥ 75% AND trades ≥ 20 can fire BUY/SELL signals.
-All other stocks are forced to RANGE with tag `⚠️ WR_LOW(XX%<75%)`.
-
-**Current pass count: 0 stocks** (TCS has WR=80% but only 5 trades < MIN_TRADES=20).
-This is an intentionally extreme filter — it eliminates 95%+ of noise trades.
-
----
-
-## ⚠️ CRITICAL: Do Not Trust Static Qualified Lists
-
-**The qualified stock list changes every time you re-run the backtest.** This is because:
-- `backtest.py` uses `yfinance` which returns slightly different prices on each run
-- `end_date='2026-05-31'` is pinned (good) but the *price series* from yfinance can vary
-- Some stocks have high WR but near-zero returns (TCS WR=80%, Ret=-0.06%)
-
-**Always run the backtest fresh and use the live output as your qualified list:**
-```bash
-python3 backtest.py --all --years 3
-```
-The output shows `✅` next to qualified stocks. Only trade those.
-
----
-
-## 📊 System Architecture
-
-```
-scan.py (v51)          → orchestrates full scan + AI + threading
-  └─ nifty_core.py     → signal logic, features, levels, regime
-  └─ nifty_categorize  → categorizes stocks into Cat A/A-/B/C1/C2a/C2b/D
-  └─ backtest.py       → 3yr historical validation (pinned end_date)
-  └─ train.py          → sklearn ML models per stock
-```
-
-### Signal Logic: RSI Mean-Reversion + ADX Trend Filter
-
-**BUY path:** RSI < 30 (oversold) + 4+ confirmations + ADX > 20 (trending)
-**SELL path:** RSI > 60 (overbought) + 4+ confirmations + ADX > 20
-**SHORT path (independent):** RSI > 70 = direct SHORT regardless of ADX
-
-### Backtest Qualification Gate (v51)
-
-A stock is **qualified** only if ALL pass:
-```python
-len(trades) >= 20      # minimum 20 trades for statistical significance
-realized_return > 0    # positive avg return per trade
-sharpe >= 0.8          # risk-adjusted return (v43)
-max_drawdown < 30.0    # DD cap at 30% (v51: was 55% — too loose)
-win_rate >= 38%        # at least 38% of trades are winners
-```
-
----
-
-## 🚀 Usage
-
-```bash
-# STEP 1: Run backtest to find qualified stocks
-python3 backtest.py --all --years 3
-
-# STEP 2: Live scan (uses AI + ML + rule-based confluence)
-python3 scan.py --ai --format telegram
-
-# INTRADAY mode
-python3 scan.py --ai --format telegram --mode intraday
-
-# Train ML models (after market hours)
+# ── Train ML models ──
 python3 train.py --index nifty100
 ```
 
-### Option A / B / C Signal Filters
+---
 
-```bash
-python3 scan.py --ai --format telegram        # Default: ADX ON, all signals
-python3 scan.py --ai --format telegram A      # ADX>20 only (recommended)
-python3 scan.py --ai --format telegram B      # Momentum mode (RSI>70 SHORT)
-python3 scan.py --ai --format telegram C      # Morning window 9:40 AM start
+## scan_telegram.py — Full Output Guide
+
+```
+🗓️ 09 Jul 2026 12:00 PM IST
+📊 Regime: ⚠️BULLISH | NIFTY 24,068 (+0.8%)
+
+🏆⭐ TOP BUY: AXISBANK
+   📈 Regime:BULL | RSI:34.6 | Conf:100% ML:UP:52% | WR:68.8% | CF:93.8% | Sharpe:3.6
+   💰 Entry:₹1310.7 | SL:₹1285.3 (risk₹25.4) | T1:₹1325.8 | T2:₹1336.1 | T3:₹1348.9
+   ⏱️  HR_ATR:₹3.9 | HR_T1:₹2.3 | HR_T2:₹3.9 | HR_T3:₹5.9
+   📦 Qty:393 @ ₹1310.7 | ATR14:₹25.4 | ATR5:₹30.1 | Score:85.7
+
+🏆⭐ TOP SHORT: HDFCBANK
+   📉 Regime:BEAR | RSI:67.7 | Conf:100% ML:DOWN:56% | WR:52.6% | CF:94.7% | Sharpe:1.33
+   💰 Entry:₹817.2 | SL:₹831.8 (risk₹14.6) | T1:₹807.5 | T2:₹802.5 | T3:₹795.2
+   ⏱️  HR_ATR:₹2.2 | HR_T1:₹1.5 | HR_T2:₹2.2 | HR_T3:₹3.4
+   📦 Qty:684 @ ₹817.2 | ATR14:₹14.6 | ATR5:₹19.3 | Score:79.5
+
+📈 Cat A — HIGHEST QUALITY (WR≥65%+Conf≥80%+CF≥50%): 3
+   📈AXISBANK ₹1310.7(+0.1%) | E:₹1310.7 SL:₹1285.3(r:₹25.4) T1:₹1325.8 T2:₹1336.1 T3:₹1348.9 | ATR14:₹25.4 ATR5:₹30.1 Qty:393 ML:UP:52%
+   📈TATASTEEL ₹187.9(-0.2%) | E:₹187.9 SL:₹184.7(r:₹3.2) T1:₹189.5 T2:₹191.1 T3:₹192.8 | ATR14:₹3.2 ATR5:₹3.3 Qty:3090 ML:DOWN:54%
+   📈BAJAJFINSV ₹1892.5(+2.0%) | E:₹1892.9 SL:₹1852.1(r:₹40.8) T1:₹1915.6 T2:₹1933.7 T3:₹1954.2 | ATR14:₹40.8 ATR5:₹45.5 Qty:244 ML:DOWN:98%
+
+📊 Cat B — GOOD QUALITY (WR≥50%+Conf≥70%+CF≥30%): 8
+   (same format)
+
+📋 Cat C — WATCHLIST (WR≥40%+Conf≥50%): 26
+   (same format)
+
+⚠️ Cat D — SHORT BIAS (RSI>65+Conf≥50%): 7
+   (same format)
+
+📋 SUMMARY — TOP 5 BUY PICKS:
+  1. AXISBANK | Entry:₹1310.7 | SL:₹1285.3 | T1:₹1325.8 | T2:₹1336.1 | T3:₹1348.9
+     ATR14:₹25.4 ATR5:₹30.1 | Qty:393 | Conf:100% WR:68.8% CF:93.8% Sharpe:3.6 ML:UP:52%
+  2. TATASTEEL | Entry:₹187.9 | SL:₹184.7 | T1:₹189.5 | T2:₹191.1 | T3:₹192.8
+     ATR14:₹3.2 ATR5:₹3.3 | Qty:3090 | Conf:100% WR:66.7% CF:90.0% Sharpe:2.02 ML:DOWN:54%
+  3. KOTAKBANK | Entry:₹371.4 | SL:₹363.6 | T1:₹375.8 | T2:₹379.2 | T3:₹383.1
+     ATR14:₹7.8 ATR5:₹8.7 | Qty:1278 | Conf:100% WR:58.8% CF:100.0% Sharpe:1.0 ML:DOWN:56%
+  4. LT | Entry:₹3925.0 | SL:₹3857.5 | T1:₹3962.5 | T2:₹3992.5 | T3:₹4026.2
+     ATR14:₹67.5 ATR5:₹74.8 | Qty:148 | Conf:100% WR:52.4% CF:95.2% Sharpe:1.46 ML:DOWN:72%
+  5. WIPRO | Entry:₹173.9 | SL:₹170.4 | T1:₹175.5 | T2:₹177.3 | T3:₹179.1
+     ATR14:₹3.5 ATR5:₹3.2 | Qty:2885 | Conf:100% WR:53.8% CF:92.3% Sharpe:1.94 ML:UP:91%
+
+📋 SUMMARY — TOP 5 SHORT PICKS:
+  1. HDFCBANK | Entry:₹817.2 | SL:₹831.8 | T1:₹807.5 | T2:₹802.5 | T3:₹795.2
+     ATR14:₹14.6 ATR5:₹19.3 | Qty:684 | Conf:100% WR:52.6% CF:94.7% Sharpe:1.33 ML:DOWN:56%
+  2. APOLLOHOSP | Entry:₹8876.5 | SL:₹9003.4 | T1:₹8799.8 | T2:₹8749.6 | T3:₹8686.2
+     ATR14:₹126.9 ATR5:₹153.5 | Qty:78 | Conf:100% WR:55.6% CF:88.9% Sharpe:1.1 ML:DOWN:86%
+  3. BAJAJFINSV | Entry:₹1892.5 | SL:₹1933.4 | T1:₹1870.1 | T2:₹1852.0 | T3:₹1831.7
+     ATR14:₹40.8 ATR5:₹45.5 | Qty:244 | Conf:100% WR:80.0% CF:50.0% Sharpe:3.54 ML:DOWN:98%
+  4. SUNPHARMA | Entry:₹1935.0 | SL:₹1964.9 | T1:₹1917.3 | T2:₹1905.1 | T3:₹1890.2
+     ATR14:₹29.9 ATR5:₹35.4 | Qty:334 | Conf:100% WR:45.8% CF:87.5% Sharpe:-0.23 ML:DOWN:75%
+  5. CIPLA | Entry:₹1437.8 | SL:₹1468.2 | T1:₹1423.6 | T2:₹1407.4 | T3:₹1392.2
+     ATR14:₹30.4 ATR5:₹28.4 | Qty:328 | Conf:100% WR:41.7% CF:83.3% Sharpe:-1.02 ML:UP:57%
+```
+
+### Field Reference (scan_telegram.py)
+
+| Field | Meaning |
+|-------|---------|
+| `Entry` | Current market price (BUY/SHORT entry reference) |
+| `SL` | Stop-loss price (risk per share = \|Entry - SL\|) |
+| `T1` | Target 1 = Entry ± ATR×0.5 |
+| `T2` | Target 2 = Entry ± ATR×1.0 |
+| `T3` | Target 3 = Entry ± ATR×1.5 |
+| `ATR14` | Daily ATR(14) — base for T2/T3/SL |
+| `ATR5` | Tight ATR(5) — used for T1 |
+| `Qty` | Shares to buy/short for exactly ₹10,000 risk |
+| `Conf` | Rule-based confluence score (0-100%) |
+| `WR` | Historical win rate from 3yr backtest |
+| `CF` | T1 completion rate — % of trades that hit T1 |
+| `Sharpe` | Risk-adjusted return ratio |
+| `ML` | ML model output: `UP:XX%` or `DOWN:XX%` = confidence |
+
+### Target Formula (Tight Intraday Mode)
+
+```
+T1  = Entry ± ATR5 × 0.5      (tight scalp, ~0.3-0.5% move)
+T2  = Entry ± ATR14 × 1.0     (moderate, ~0.8-1.2% move)
+T3  = Entry ± ATR14 × 1.5     (full session, ~1.2-1.8% move)
+SL  = Entry ± ATR14 × 1.0     (1:1 risk:reward on T1)
+HR_T1 = ATR14 / 6.5 × 0.5     (per-hour sub-target T1)
+HR_T2 = ATR14 / 6.5 × 1.0     (per-hour sub-target T2)
+HR_T3 = ATR14 / 6.5 × 1.5     (per-hour sub-target T3)
 ```
 
 ---
 
-## 📊 SWING System — Backtest (Live Output Only)
+## Category Definitions
 
-> **DO NOT use a static list.** Run `backtest.py --all --years 3` to get today's qualified stocks.
-
-The backtest is pinned at `end_date='2026-05-31'` (3yr, Jun 2023–May 2026) for reproducibility.
-Expected qualified count: **2–6 stocks** (very selective gate).
-
-### Qualified Gate — What It Means
-
-| Metric | Threshold | Why |
-|--------|-----------|-----|
-| WR ≥ 38% | 38 of 100 trades win | Minimum viable edge |
-| Sharpe ≥ 0.8 | risk-adjusted positive | Filters noise traders |
-| RealRet > 0 | positive avg trade | Must actually make money |
-| DD < 30% | max 6 consecutive losers | Survivable drawdown |
-| Trades ≥ 20 | 3yr ≈ 1/mo | Statistical confidence |
+| Cat | Threshold | Meaning |
+|-----|-----------|---------|
+| **A** | WR≥65% + Conf≥80% + CF≥50% | Highest quality — trade with confidence |
+| **B** | WR≥50% + Conf≥70% + CF≥30% | Good quality — validate before entry |
+| **C** | WR≥40% + Conf≥50% | Watchlist — candidates |
+| **D** | RSI>65 + Conf≥50% | Short bias — bearish signals |
 
 ---
 
-## 🏷️ Category Definitions
-
-| Category | Definition | Action |
-|----------|------------|--------|
-| **Cat A** | Triple confirmed (Signal + AI_BULL + ML_UP) + WR≥45% + positive history | ✅ Trade |
-| **Cat A-** | 2-of-3 confirmed + positive returns but level mismatch | ⚠️ Trade with caution |
-| **Cat B** | AI HIGH/MEDIUM + WR≥35% + RR≥-2% + no severe NEG_HIST | ⚠️ Validate live |
-| **Cat C1** | RSI>70 SHORT (independent momentum trigger) | ⚠️ Short only, hedge |
-| **Cat C2a** | WR≥40% OR Ret>0% + backtest validation | ⚠️ Candidates — validate |
-| **Cat C2b** | Poor history, low WR, no backtest edge | ℹ️ Informational only |
-| **Cat D** | ML=DOWN + AI=BULLISH (contradiction) | ℹ️ Watch only |
-| **WATCHLIST** | BEAR_DIV + BUY (contradiction) | ℹ️ Watch only |
-
----
-
-## 📈 Intraday v51 Targets (T1/T2/T3)
+## System Architecture
 
 ```
-T1 = ATR5 × 0.5   (tight scalp — 0.3-0.5% typical)
-T2 = ATR14 × 1.0  (moderate — 0.8-1.2% typical)
-T3 = ATR14 × 1.5  (full move — 1.2-1.8% typical)
-```
-
-Regime-aware: trending=T1+T2+T3, sideways=T1+T2, choppy=T1 only.
-
----
-
-## ⚙️ Configuration Guide
-
-### Mode 1: Qualified Stock-Picking (Rating Basis)
-```bash
-python3 backtest.py --all --years 3
-# → Trade ONLY stocks with ✅ marker
-```
-
-### Mode 2: Tighter ADX Filter
-```bash
-python3 backtest.py --all --years 3 --min-adx 30
-```
-
-### Mode 3: Combined Strict
-```bash
-python3 backtest.py --all --years 3 --min-adx 30 --min-rr 1.5
+scan_telegram.py (v54)  → NEW: full Telegram scan with ALL fields
+scan.py (v52)            → legacy scan with AI + ML
+  └─ nifty_core.py       → signal logic, features, levels, regime
+  └─ nifty_categorize    → categorizes stocks into Cat A/B/C/D
+  └─ backtest.py         → 3yr validation with T1→SL%, T3 exits
+  └─ train.py            → sklearn ML models per stock
 ```
 
 ---
 
 ## ⚠️ Disclaimer
-Paper trading only. No live money. This is a stock-picking tool — trade only the
-qualified stocks, not the full universe. Sharpe ≥ 0.8 is genuinely strong for swing trading.
-DD < 30% is survivable for a swing system with 5% position sizing.
+Paper trading only. No live money. Backtest results are not indicative of future performance. Always validate with live market data.

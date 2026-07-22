@@ -263,6 +263,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
     partial_exits = 0
     t1_triggered = False
     was_profitable = False  # v24: SIG exit disabled
+    _trade_hit_t1 = False; _trade_hit_t2 = False; _trade_hit_t3 = False
     trades = []
     sector_counts = {} if sector_limits else {}
     pnl_list = []
@@ -422,6 +423,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 partial_exits += 1
                 tsl = max(tsl, entry_price)  # Activate TSL after T1 partial (lock profit on remaining half)
                 t1_triggered = True
+                _trade_hit_t1 = True
                 was_profitable = True  # position has locked in profit — SIG exit now allowed
                 peak_realized = max(peak_realized, capital)
                 # Activate TSL immediately after T1 partial (even if use_trailing=False)
@@ -449,7 +451,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 trades.append({'pnl': round(pnl, 2), 'type': 'TIME',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0, 'hold_days': hold_days,
-                               'unreal_pct': round(unreal_pnl, 2)})
+                               'unreal_pct': round(unreal_pnl, 2),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0
                 shares_remaining = 0
                 t1_triggered = False
@@ -514,7 +517,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     trades.append({'pnl': round(pnl, 2), 'type': 'TSL',
                                    'sector': get_sector(name), 'date': str(df.index[i].date()),
                                    'partial': partial_exits > 0,
-                                   'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                                   'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                     shares = 0
                     shares_remaining = 0
                     t1_triggered = False
@@ -541,7 +545,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                     trades.append({'pnl': round(pnl, 2), 'type': 'TSL',
                                    'sector': get_sector(name), 'date': str(df.index[i].date()),
                                    'partial': partial_exits > 0,
-                                   'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                                   'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                     shares = 0; shares_remaining = 0; t1_triggered = False
                     position = None; entry_date = None
                     if sector_limits:
@@ -557,10 +562,12 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 pnl_list.append(pnl)
                 realized_pnl_sum += shares_remaining * (slip_exit - entry_price)
                 peak_realized = max(peak_realized, capital)
+                _trade_hit_t2 = True
                 trades.append({'pnl': round(pnl, 2), 'type': 'T2',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0,
-                               'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                               'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0; shares_remaining = 0; t1_triggered = False
                 position = None; entry_date = None
                 continue
@@ -576,7 +583,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 trades.append({'pnl': round(pnl, 2), 'type': 'SL',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0,
-                               'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                               'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0
                 shares_remaining = 0
                 t1_triggered = False
@@ -629,7 +637,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 trades.append({'pnl': round(pnl, 2), 'type': 'TIME',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0, 'hold_days': hold_days,
-                               'unreal_pct': round(unreal_pnl, 2)})
+                               'unreal_pct': round(unreal_pnl, 2),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0; shares_remaining = 0; t1_triggered = False
                 position = None; entry_date = None
                 if sector_limits:
@@ -649,7 +658,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 peak_realized = max(peak_realized, capital)
                 trades.append({'pnl': round(pnl, 2), 'type': 'ABSSL',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
-                               'partial': partial_exits > 0})
+                               'partial': partial_exits > 0,
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0; shares_remaining = 0; t1_triggered = False
                 position = None; entry_date = None
                 if sector_limits:
@@ -687,11 +697,13 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 pnl_list.append(pnl)
                 realized_pnl_sum += shares_remaining * (entry_price - slip_exit)
                 peak_realized = max(peak_realized, capital)
+                _trade_hit_t2 = True
                 trades.append({'pnl': round(pnl, 2), 'type': 'T2',
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0,
                                'entry_adx': (entry_adx_info or {}).get('adx', 0),
-                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0; shares_remaining = 0; t1_triggered = False
                 position = None; entry_date = None
                 continue
@@ -708,7 +720,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                                'sector': get_sector(name), 'date': str(df.index[i].date()),
                                'partial': partial_exits > 0,
                                'entry_adx': (entry_adx_info or {}).get('adx', 0),
-                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                               'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
                 shares = 0; shares_remaining = 0; t1_triggered = False
                 position = None; entry_date = None
                 if sector_limits:
@@ -725,7 +738,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
         trades.append({'pnl': round(pnl, 2), 'type': 'CLOSED',
                        'sector': get_sector(name), 'date': str(df.index[-1].date()),
                        'partial': partial_exits > 0,
-                       'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                       'entry_adx': (entry_adx_info or {}).get('adx', 0), 'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                               'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
 
     if position == 'SHORT' and shares_remaining > 0:
         slip_exit_end = df['Close'].iloc[-1] * (1 + slippage_pct)  # buy to cover at ask
@@ -738,7 +752,8 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                        'sector': get_sector(name), 'date': str(df.index[-1].date()),
                        'partial': partial_exits > 0,
                        'entry_adx': (entry_adx_info or {}).get('adx', 0),
-                       'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False)})
+                       'entry_adx_trending': (entry_adx_info or {}).get('adx_trending', False),
+                       'hit_t1': _trade_hit_t1, 'hit_t2': _trade_hit_t2, 'hit_t3': _trade_hit_t3})
 
     if not trades:
         return dict(symbol=name, trades=0, win_rate=0, compounded_return=0.0,
@@ -792,6 +807,20 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
                 max_drawdown < 30.0 and         # v50: 30% DD cap (was 55% — too loose)
                 (len(wins) / len(trades) >= 0.38 if trades else False))
 
+
+    n = len(trades)
+    trade_types = [t['type'] for t in trades]
+    _wins = sum(1 for t in trades if t['pnl'] > 0)
+    exit_stats = {
+        'wr':       round(_wins / n * 100, 1),
+        't1_pct':   round(sum(1 for t in trades if t.get('hit_t1', False)) / n * 100, 1),
+        't2_pct':   round(sum(1 for t in trades if t.get('hit_t2', False)) / n * 100, 1),
+        't3_pct':   round(sum(1 for t in trades if t.get('hit_t3', False)) / n * 100, 1),
+        'sl_pct':   round(trade_types.count('SL')   / n * 100, 1),
+        'tsl_pct':  round(trade_types.count('TSL')  / n * 100, 1),
+        'time_pct': round(trade_types.count('TIME') / n * 100, 1),
+        't1_sl_pct':round(sum(1 for t in trades if t.get('hit_t1') and t.get('type') in ('SL','TSL')) / n * 100, 1),
+    }
     return {
         'symbol': name,
         'trades': len(trades),
@@ -811,6 +840,7 @@ def backtest_stock(symbol, start=None, end=None, use_trailing=False, sector_limi
         'max_drawdown': round(max_drawdown, 2),
         'qualified': bool(qualified),
         'no_sig_exit': no_sig_exit,
+        'exit_stats': exit_stats,
         # v31: ADX regime breakdown
         'adx_regime': {
             'avg_entry_adx': round(sum(all_entry_adx) / len(all_entry_adx), 1) if all_entry_adx else 0,
@@ -986,25 +1016,35 @@ def main():
         print("No results."); return
 
     qualified = [r for r in active if r['qualified']]
-    print(f"\n{'Sym':<10} {'Trds':>5} {'WR%':>6} {'AvgTrd%':>8} {'RealRet%':>9} {'CompRet%':>9} {'Sharpe':>7} {'DD%':>6} {'QLF':>4}")
-    print("-" * 70)
+    print(f"\n{'Sym':<10} {'Trds':>5} {'WR%':>5} {'Avg%':>7} {'T1%':>5} {'SL%':>5} {'T1→SL%':>7} {'T2%':>5} {'TIME%':>6} {'ADX':>8} {'Sharpe':>7} {'QLF':>4}")
+    print("-" * 106)
     for r in sorted(active, key=lambda x: -x['realized_return']):
         q = "✅" if r['qualified'] else "  "
         avg_t = r.get('avg_trade_return', 0)
-        print(f"{r['symbol']:<10} {r['trades']:>5} {r['win_rate']:>6.1f} "
-              f"{avg_t:>+8.2f} {r['realized_return']:>+9.2f} {r['return']:>+9.2f} "
-              f"{r['sharpe']:>7.2f} {r['max_drawdown']:>6.2f} {q:>4}")
-    print("-" * 70)
+        es = r.get('exit_stats', {})
+        adx_r = r.get('adx_regime', {})
+        adx_str = f"{adx_r.get('avg_entry_adx', 0):.0f}"
+        t1p   = es.get('t1_pct', 0)
+        slp   = es.get('sl_pct', 0)
+        t1_sl = es.get('t1_sl_pct', 0)
+        t2p   = es.get('t2_pct', 0)
+        timep = es.get('time_pct', 0)
+        print(f"{r['symbol']:<10} {r['trades']:>5} {r['win_rate']:>5.1f} "
+              f"{avg_t:>+7.2f} {t1p:>5.1f} {slp:>5.1f} {t1_sl:>7.1f} {t2p:>5.1f} {timep:>6.1f} "
+              f"{adx_str:>8} {r['sharpe']:>7.2f} {q:>4}")
+    print("-" * 106)
 
-    avg_rr  = sum(r['realized_return'] for r in active) / len(active)
-    avg_ret = sum(r['return'] for r in active) / len(active)
-    avg_wr  = sum(r['win_rate'] for r in active) / len(active)
-    avg_dd  = sum(r['max_drawdown'] for r in active) / len(active)
-    avg_sh  = sum(r['sharpe'] for r in active) / len(active)
-    avg_t   = sum(r.get('avg_trade_return', 0) for r in active) / len(active)
-    print(f"{'AVG':<10} {sum(r['trades'] for r in active):>5} {avg_wr:>6.1f} "
-          f"{avg_t:>+8.2f} {avg_rr:>+9.2f} {avg_ret:>+9.2f} "
-          f"{avg_sh:>7.2f} {avg_dd:>6.2f} {len(qualified):>4}/{len(active)}")
+    avg_wr   = sum(r['win_rate'] for r in active) / len(active)
+    avg_sh   = sum(r['sharpe'] for r in active) / len(active)
+    avg_t    = sum(r.get('avg_trade_return', 0) for r in active) / len(active)
+    avg_t1p  = sum(r.get('exit_stats',{}).get('t1_pct',0)    for r in active) / len(active)
+    avg_slp  = sum(r.get('exit_stats',{}).get('sl_pct',0)    for r in active) / len(active)
+    avg_t1sl = sum(r.get('exit_stats',{}).get('t1_sl_pct',0) for r in active) / len(active)
+    avg_t2p  = sum(r.get('exit_stats',{}).get('t2_pct',0)   for r in active) / len(active)
+    avg_tmp  = sum(r.get('exit_stats',{}).get('time_pct',0) for r in active) / len(active)
+    print(f"{'AVG':<10} {sum(r['trades'] for r in active):>5} {avg_wr:>5.1f} "
+          f"{avg_t:>+7.2f} {avg_t1p:>5.1f} {avg_slp:>5.1f} {avg_t1sl:>7.1f} {avg_t2p:>5.1f} {avg_tmp:>6.1f} "
+          f"{'':>8} {avg_sh:>7.2f} {len(qualified):>4}/{len(active)}")
 
     print("\n  ℹ️  METRIC GUIDE:")
     print("     AvgTrd% = avg P&L% per trade (from pnl_list)")

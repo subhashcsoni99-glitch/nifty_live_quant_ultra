@@ -251,7 +251,7 @@ def get_market_regime():
     cache_age = (now - NIFTY_REGIME_CACHE['fetched_at']).total_seconds() if NIFTY_REGIME_CACHE['fetched_at'] else 999999
     if NIFTY_REGIME_CACHE['fetched_at'] is None or cache_age > 300:
         try:
-            nifty = yf.Ticker("^NSEI").history(period="30d")
+            nifty = yf.Ticker("^NSEI").history(period="60d")
             nifty_ma20 = nifty['Close'].rolling(20).mean().iloc[-1]
             nifty_ma50 = nifty['Close'].rolling(50).mean().iloc[-1]
             nifty_price = nifty['Close'].iloc[-1]
@@ -483,8 +483,15 @@ def detect_divergence(df):
     return None
 
 # ─── ATR-based Levels ────────────────────────────────────────────────────────
-def calc_levels(price, atr, mode='intraday'):
+def calc_levels(price, atr, mode='intraday', signal=None):
     mults = ATR_CONFIG.get(mode, ATR_CONFIG['intraday'])
+    # v51: SELL signal → SL above entry, targets below
+    if signal == 'SELL':
+        return {
+            'sl': round(price + atr * mults['sl'], 2),
+            't1': round(price - atr * mults['t1'], 2),
+            't2': round(price - atr * mults['t2'], 2),
+        }
     return {
         'sl': round(price - atr * mults['sl'], 2),
         't1': round(price + atr * mults['t1'], 2),
@@ -639,7 +646,7 @@ def get_signal(df, i, momentum_mode=False, multi_mode=False, high_conviction_mod
     c_price_ma50 = pv > ma50
     c_ma50_ma200 = ma50 > ma200
     c_rsi_buy  = rsi < RSI_CONFIG['buy_strict']
-    c_rsi_sell = rsi > RSI_CONFIG['sell_strict']
+    c_rsi_sell = rsi >= RSI_CONFIG['sell_strict']
     c_rsi_bear = rsi > 70   # v36 P1-C: RSI>70 = extreme overbought → bearish short
     c_macd = macd > macd_sig
     c_vol = vol_ratio > SIGNAL_CONFIG['volume_spike']
@@ -673,12 +680,12 @@ def get_signal(df, i, momentum_mode=False, multi_mode=False, high_conviction_mod
     # RSI>70 = extreme overbought = direct SHORT regardless of ADX/MA alignment
     # ADX filter BYPASSED for RSI>70 — extreme overbought overrides trend
     # v44 FIX: sell_cnt scales with RSI extremity (71→4, 76→5, 81→6, 86→7, 91→8+)
-    if rsi > MOMENTUM_CONFIG['rsi_overbought']:
-        rsi_extremity = max(0, int((rsi - MOMENTUM_CONFIG['rsi_overbought']) / 5))
+    if rsi >= 70:
+        rsi_extremity = max(0, int((rsi - 70) / 5))
         sell_cnt_dynamic = 4 + rsi_extremity
         return -1, {'signal': 'SELL', 'buy_cnt': 0, 'sell_cnt': sell_cnt_dynamic,
                     'divergence': divergence,
-                    'reasons': [f"🎯 RSI={rsi:.0f}>70 (extreme overbought — direct SHORT)",
+                    'reasons': [f"🎯 RSI={rsi:.0f}>=70 (extreme overbought — direct SHORT)",
                                  f"ADX={adx:.0f} (trend={'✅' if adx_trending else '❌'})"],
                     'adx': round(adx, 1), 'adx_trending': adx_trending}, []
 
@@ -787,10 +794,10 @@ def _get_high_conviction_signal(df, i, adx, adx_trending):
                    'adx': round(adx, 1), 'adx_trending': adx_trending,
                    'mode': 'HC'}, []
     
-    # ── SHORT: RSI > 70 independent trigger (same as default) ────────
-    rsi_overbought = rsi > MOMENTUM_CONFIG['rsi_overbought']
+    # ── SHORT: RSI >= 70 independent trigger (same as default) ────────
+    rsi_overbought = rsi >= 70
     if rsi_overbought:
-        rsi_ext = max(0, int((rsi - MOMENTUM_CONFIG['rsi_overbought']) / 5))
+        rsi_ext = max(0, int((rsi - 70) / 5))
         sell_cnt = 4 + rsi_ext
         reasons = [
             f"📉 HC SHORT | RSI={rsi:.0f}>70 (extreme overbought)",

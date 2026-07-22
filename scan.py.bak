@@ -748,10 +748,6 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             swing_sl_dist = price * 0.01
         swing_qty = max(1, int(10000 / swing_sl_dist))
         swing_pos_pct = round((swing_qty * price) / 100000 * 100, 1)
-        h = r.get('hourly') or {}
-        day_atr = atr_val
-        hr_atr  = h.get('hourly_atr', day_atr)
-        per_hr  = round(h.get('intraday_per_hr', hr_atr * ATR_CONFIG['swing']['t1'] / 24), 1) if hr_atr else 0
         pos_warn = None   # P0-1 fix: swing positions naturally 50-500% of capital (fixed-risk sizing).
                           # HIGH_POS warning removed — qty_10k is correct; qty is what matters.
         pos_tag = ''
@@ -784,18 +780,18 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
             qty = _qty_rs10k(price, hr_l['sl'], sig='SELL', mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}"
+                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     💠 {_fmt_tight(hr_l, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}"
+                tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             if mode == 'swing':
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}"
+                tline += f"     🎯 {_fmt_tight(sw_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
             else:
                 tline = f"  {dir_icon} {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | Conf:{r['prob']}% | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                tline += f"     💠 {_fmt_tight(hr_l, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}"
+                tline += f"     💠 {_fmt_tight(hr_l, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}"
         if tags:
             tag_str = " ".join(tags)
             tline += f" [{tag_str}]"
@@ -839,10 +835,6 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         rsi = r.get('rsi', 0)
         hr_l, sw_l, atr_val, atr5_val = fmt_levels_hr(r, sig, tight=(level_mode == 'intraday_tight'), atr5=r.get('atr5'), choppy=choppy)
         price = r['price']
-        h = r.get('hourly_data') or {}
-        day_atr = atr_val
-        hr_atr  = h.get('hourly_atr', day_atr)
-        per_hr  = round(h.get('intraday_per_hr', hr_atr * ATR_CONFIG['swing']['t1'] / 24), 1) if hr_atr else 0
         age_days = r.get('signal_age_days', 0)
         # P0-1 Fix: swing-based position sizing (realistic 4-10%, not intraday 15-40%)
         swing_sl_dist = abs(price - r.get('sl_swing', price * 0.015))
@@ -879,7 +871,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                 return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f} → T3:{lvl['t3']:.0f}"
             prev = r.get('prev', r['price'])
             tline = (f"  📉 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                     f"     {icon} {_fmt(lvl, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}")
+                     f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         else:
             qty = _qty_rs10k(price, hr_l['sl'], mode=mode)
             lvl = sw_l if mode == 'swing' else hr_l
@@ -891,7 +883,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
                 return f"SL:{lvl['sl']:.0f} {t1_str} T2:{lvl['t2']:.0f} → T3:{lvl['t3']:.0f}"
             prev = r.get('prev', r['price'])
             tline = (f"  📈 {r['symbol']} ₹{r['price']:,.0f}({prev:,.0f}) | RSI:{rsi:.0f} {cond_icon} | RR:{rr:+.0f}% {wr_info} | CF:{confluence}/10{age_icon}{pos_tag}\n"
-                     f"     {icon} {_fmt(lvl, mode)} | Day_ATR:₹{day_atr:.1f} | Hr_ATR:₹{hr_atr:.1f} | ~₹{per_hr}/hr | Qty:{qty}")
+                     f"     {icon} {_fmt(lvl, mode)} | ~₹{atr_val*ATR_CONFIG['swing']['t1']/24:.1f}/hr | Qty:{qty}")
         if tags:
             tline += " " + " ".join(tags)
         return tline
@@ -913,7 +905,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         for r in top_buys:
             out += fmt_top_pick(r, 'BUY') + "\n\n"
     else:
-        out += f"🏆⭐ TOP BUYS  [0]: no BUY signals meet ⭐ criteria (WR>=40%+CF>=7.9+AI_Conf>=50%)\n"
+        out += f"🏆⭐ TOP BUYS  [0]: no BUY signals meet ⭐ criteria (WR>=55%+CF>=7.9+AI_Conf>=90%)\n"
 
     if top_shorts:
         g = sum(1 for r in top_shorts if r.get('_stats', {}).get('win_rate', 0) >= 50)
@@ -923,7 +915,7 @@ def format_telegram(results, today, top_n=None, conversation_label=None, max_pos
         for r in top_shorts:
             out += fmt_top_pick(r, 'SELL') + "\n\n"
     else:
-        out += f"🏆⭐ TOP SHORTS [0]: no SELL signals meet ⭐ criteria (WR>=40%+CF>=7.9+AI_Conf>=50%)\n"
+        out += f"🏆⭐ TOP SHORTS [0]: no SELL signals meet ⭐ criteria (WR>=55%+CF>=7.9+AI_Conf>=90%+TRENDING)\n"
 
     # ── Quality tier blocks (v38 P0-4/P0-5/P1-5/P1-6) ──────────────────────────
     # v38 P1-6: oversized separation (use max_pos_pct from parse_args)

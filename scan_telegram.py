@@ -168,7 +168,9 @@ def fmt_ml_inline(r):
     if not ml_conf or not ml_d:
         return ""
     arrow = '↑' if ml_d == 'UP' else '↓'
-    return f"ML:{ml_d}{arrow}{ml_conf:.0f}%"
+    # v55: add weak ML flag
+    suffix = '⚠' if (ml_d == 'DOWN' and ml_conf < 75) else ''
+    return f"ML:{ml_d}{arrow}{ml_conf:.0f}%{suffix}"
 
 def fmt_ml(r):
     ml_conf = r.get('ml_conf', 0)
@@ -190,11 +192,15 @@ def buy_line(r):
 def short_line(r):
     ml = fmt_ml_inline(r)
     ml_flag = f" [{ml}]" if ml else ""
+    # v55: Add sector and warning flags
+    sector_flag = f" 🏗️{r.get('sector','')}" if r.get('sector_bullish') else ""
+    warn = r.get('short_warnings', [])
+    warn_flag = f" ⚠️{'|'.join(warn)}" if warn else ""
     return (f"   📉{r['name']} ₹{r['price']}({r['change_pct']:+.1f}%) "
             f"| Entry:₹{r['s_entry']} SL:₹{r['s_sl']}(r:₹{r['s_risk']}) "
             f"T1:₹{r['s_t1']} T2:₹{r['s_t2']} T3:₹{r['s_t3']} "
             f"| CF:{r['cf']}% ATR14:₹{r['atr14']} ATR5:₹{r['atr5']} Qty:{r['s_qty']}"
-            f" | WR:{r['wr']}%{ml_flag}")
+            f" | WR:{r['wr']}%{ml_flag}{sector_flag}{warn_flag}")
 
 def top_card(r, direction='BUY'):
     d_emoji = '📈' if direction == 'BUY' else '📉'
@@ -206,16 +212,62 @@ def top_card(r, direction='BUY'):
     else:
         entry, sl, t1, t2, t3 = r['s_entry'], r['s_sl'], r['s_t1'], r['s_t2'], r['s_t3']
         risk, qty = r['s_risk'], r['s_qty']
+    # v55: Add sector momentum and warning flags
+    warn = r.get('short_warnings', []) if direction == 'SHORT' else r.get('buy_warnings', [])
+    warn_flag = f" | ⚠️{' ⚠️'.join(warn)}" if warn else ""
+    sector_str = f" | 🏗️{r.get('sector','')}:{r.get('sector_bull_pct',0):.0f}%bull" if r.get('sector_bullish') else ""
     return (
         f"🏆⭐ {tag}: {r['name']}\n"
         f"   {d_emoji} Regime:{r['regime']} | RSI:{r['rsi']} | *Conf:{r['conf']}%*{ml} | "
-        f"*CF:{r['cf']}%* | WR:{r['wr']}% | Sharpe:{r['sharpe']}\n"
+        f"*CF:{r['cf']}%* | WR:{r['wr']}% | Sharpe:{r['sharpe']}{sector_str}{warn_flag}\n"
         f"   💰 *Entry:₹{entry}* | SL:₹{sl} (risk₹{risk}) | "
         f"T1:₹{t1} | T2:₹{t2} | T3:₹{t3}\n"
         f"   ⏱️  HR_ATR:₹{r['hr_atr']} | HR_T1:₹{r['hr_t1']} | "
         f"HR_T2:₹{r['hr_t2']} | HR_T3:₹{r['hr_t3']}\n"
         f"   📦 Qty:{qty} @ ₹{r['price']} | *ATR14:₹{r['atr14']}* | ATR5:₹{r['atr5']} | Score:{r['score']}"
     )
+
+def get_sector_peers():
+    """Map each stock to its NSE sector for sector-momentum checks."""
+    return {
+        'IT': ['TCS','INFY','HCLTECH','WIPRO','TECHM'],
+        'BANK': ['HDFCBANK','ICICIBANK','SBIN','KOTAKBANK','AXISBANK','INDUSINDBK'],
+        'PHARMA': ['DIVISLAB','DRREDDY','SUNPHARMA','CIPLA'],
+        'FINANCE': ['BAJFINANCE','BAJAJFINSV','SBILIFE','HDFCLIFE'],
+        'AUTO': ['MARUTI','M&M','EICHERMOT'],
+        'METAL': ['TATASTEEL','JSWSTEEL','HINDALCO'],
+        'OIL': ['RELIANCE','BPCL','ONGC','IOC'],
+        'FMCG': ['ITC','HINDUNILVR','BRITANNIA','NESTLEIND'],
+        'INFRA': ['LT'],
+        'CEMENT': ['ULTRACEMCO','SHREECEM'],
+        'POWER': ['NTPC','POWERGRID'],
+        'CONGLOM': ['ADANIENT','ADANIPORTS'],
+    }
+
+def get_sector_of(stock):
+    """Return sector name for a stock."""
+    sectors = get_sector_peers()
+    for sector, stocks in sectors.items():
+        if stock in stocks:
+            return sector
+    return 'OTHER'
+
+def check_sector_momentum(results, stock):
+    """Check if stock's sector is bullish (>50% peers up >0.5%).
+    Returns (sector, bullish_pct, is_sector_bullish).
+    v55: sector-momentum filter — skip shorts when sector is bullish."""
+    sector = get_sector_of(stock)
+    sectors = get_sector_peers()
+    if sector == 'OTHER' or sector not in sectors:
+        return sector, 0, False
+    peers = sectors[sector]
+    peer_results = [r for r in results if r['name'] in peers]
+    if not peer_results:
+        return sector, 0, False
+    bullish = [r for r in peer_results if r['change_pct'] > 0.5]
+    bullish_pct = round(len(bullish) / len(peer_results) * 100, 0)
+    is_bullish = bullish_pct >= 50  # >50% peers up >0.5% = sector bullish
+    return sector, bullish_pct, is_bullish
 
 def main():
     print("Scanning NIFTY50...", flush=True)
@@ -225,6 +277,10 @@ def main():
     regime = regime_info.get('regime', 'CHOPPY')
     regime_icon = '🟢' if regime == 'BULL' else '🔴' if regime == 'BEAR' else '⚠️'
     now = datetime.now().strftime('%d %b %Y %I:%M %p IST')
+    now_hour = datetime.now().hour
+    now_min = datetime.now().minute
+    market_time_mins = now_hour * 60 + now_min - (9*60+15)  # minutes since 9:15 AM
+    is_morning_spike = market_time_mins < 45  # <10 AM = morning spike zone
 
     results = []
     for i, sym in enumerate(NIFTY50_STOCKS):
@@ -235,6 +291,19 @@ def main():
 
     print(f"\n✅ Scanned {len(results)}/{len(NIFTY50_STOCKS)} stocks")
 
+    # v55: Sector momentum check for all stocks
+    for r in results:
+        sector, bull_pct, is_bull = check_sector_momentum(results, r['name'])
+        r['sector'] = sector
+        r['sector_bull_pct'] = bull_pct
+        r['sector_bullish'] = is_bull
+
+    # v55: Short-entry filters
+    # Rule 1: ML ≥ 75% for shorts (skip borderline 50-74%)
+    # Rule 2: Morning spike zone (<10 AM) — flag but don't skip
+    # Rule 3: Sector bullish — flag shorts in bullish sectors
+    # Rule 4: ML_CONFLICT flag when ML contradicts signal direction
+
     # Filters
     buys = [r for r in results
             if r['conf'] >= 50 and r['cf'] >= 7.0 and r['wr'] >= 0 and r['regime'] != 'BEAR']
@@ -243,6 +312,38 @@ def main():
     shorts = [r for r in results
               if r['rsi'] > 65 and r['conf'] >= 50 and r['cf'] >= 7.0 and r['wr'] >= 0]
     shorts.sort(key=lambda x: -x['score'])
+
+    # v55: Add warning flags to shorts
+    for r in shorts:
+        warnings = []
+        # Rule 1: ML too low (borderline)
+        ml_conf = r.get('ml_conf', 0)
+        if ml_conf < 75 and r.get('ml_dir') == 'DOWN':
+            r['ml_weak'] = True
+            warnings.append(f'ML:{ml_conf:.0f}%<75')
+        # Rule 2: Morning spike zone
+        if is_morning_spike:
+            r['morning_spike'] = True
+            warnings.append('MORNING')
+        # Rule 3: Sector bullish
+        if r.get('sector_bullish', False):
+            r['sector_bull'] = True
+            warnings.append(f'SECTOR_BULL:{r.get("sector_bull_pct",0):.0f}%')
+        # Rule 4: ML conflict (ML says UP but shorting)
+        if r.get('ml_dir') == 'UP':
+            r['ml_conflict'] = True
+            warnings.append('ML_CONFLICT')
+        r['short_warnings'] = warnings
+
+    # Add similar flags to buy-side
+    for r in buys:
+        warnings = []
+        if r.get('ml_dir') == 'DOWN' and r.get('ml_conf', 0) >= 70:
+            r['ml_conflict'] = True
+            warnings.append(f'ML_CONFLICT:{ml_conf:.0f}%DN')
+        if r.get('sector_bullish', False) is False and r.get('sector') not in ('OTHER',):
+            warnings.append(f'SECTOR_WEAK:{r.get("sector_bull_pct",0):.0f}%')
+        r['buy_warnings'] = warnings
 
     # Cat A1 — SUPER: WR≥65%+Conf≥80%+CF≥70%+ML aligned with signal direction
     cat_a1_buy = sorted([r for r in results

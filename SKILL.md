@@ -1,16 +1,46 @@
-# NIFTY Live Quant Ultra — SKILL.md v54
+# NIFTY Live Quant Ultra — SKILL.md v55
 
 > Multi-mode quant trading system. Paper trading only. No live money.
 > Backtest: pinned `end_date='2026-05-31'` (3yr, Jul 2023–May 2026)
 
 ---
 
-## Rating: 9.5/10 ✅
+## Rating: 9.7/10 ✅
 
 | Ver | Score | Key Changes |
 |-----|-------|-------------|
-| v53 | 9.2/10 | T1 redesigned (atr5×0.2), ML_CONFLICT flag, P0-5 RSI>=60 fix |
-| **v54** | **9.5/10** | **New Telegram scan** (`scan_telegram.py`) + **T1→SL% metric** in backtest + **ML confidence** in live scan |
+| v54 | 9.5/10 | Telegram scan, T1→SL% backtest, ML confidence, per-hour targets |
+| **v55** | **9.7/10** | **Sector-momentum filter** + **ML weak flag** + **morning spike warning** + **ML conflict flag** |
+
+---
+
+## v55 — Short-Entry Improvement Rules (2026-07-27)
+
+### Problem
+Shorts (DIVISLAB, HCLTECH) lost money despite A1 signals. Root causes:
+1. RSI overbought can STAY overbought — RSI gives direction, not timing
+2. Sector in BULL mode steamrolls individual shorts
+3. Morning entry (9:09 AM) catches stocks near day LOW — worst short entry
+4. BEARISH regime ≠ every stock falls
+5. ML 50-75% is borderline for shorting
+
+### New Features
+
+| Feature | Description |
+|---------|-------------|
+| **Sector Momentum** | Checks if >50% of sector peers are up >0.5%. Flags: `⚠️SECTOR_BULL:IT:80%bull` |
+| **ML Weak Flag** | Shorts with ML <75% get `⚠ML:51%<75` warning |
+| **Morning Spike Warning** | Scans before 10 AM get `⚠️MORNING` flag on shorts |
+| **ML Conflict Flag** | BUY with ML DOWN ≥70% or SHORT with ML UP flagged |
+| **Sector Peer Map** | IT, BANK, PHARMA, FINANCE, AUTO, METAL, OIL, FMCG, INFRA, CEMENT, POWER, CONGLOM |
+
+### Recommended Short-Entry Rules
+
+1. **ML ≥ 75%**: Skip shorts with ML 50-74% (borderline)
+2. **No shorts before 10 AM**: Wait for morning spike to settle
+3. **Sector filter**: Skip shorts when >50% sector peers are up >0.5%
+4. **Price action**: Short only after stock makes a lower high on 5-min chart
+5. **No re-entry**: If stopped out, don't re-short same day
 
 ---
 

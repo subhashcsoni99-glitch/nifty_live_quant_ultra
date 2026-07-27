@@ -289,7 +289,13 @@ def main():
         out.append("🏆⭐ TOP SHORT: No SHORT signals meet criteria (RSI>65 + Conf≥50% + CF≥70% + WR≥0%)")
     out.append("")
 
-    # Cat A1 — SUPER
+    # Helper to categorize direction per stock
+    def stock_direction(r):
+        if r['regime'] == 'BEAR' or (r.get('ml_dir') == 'DOWN' and r.get('ml_conf', 0) >= 50):
+            return 'SHORT'
+        return 'BUY'
+
+    # Cat A1 — SUPER (both BUY and SHORT)
     out.append(f"⭐ Cat A1 — SUPER (WR≥65%+Conf≥80%+CF≥70%+ML aligned ≥50%): {len(cat_a1)}")
     if cat_a1_buy:
         out.append("  📈 BUY:")
@@ -303,34 +309,50 @@ def main():
         out.append("  — No stocks meet Cat A1 criteria —")
     out.append("")
 
-    # Cat A — HIGH CONF (no ML filter)
+    # Cat A — HIGH CONF (both BUY and SHORT)
     out.append(f"📈 Cat A — HIGH CONF (WR≥65%+Conf≥80%+CF≥70%): {len(cat_a)}")
     if cat_a:
+        out.append("  📈 BUY:")
         for r in cat_a[:5]:
             out.append(buy_line(r))
+        out.append("  📉 SHORT:")
+        for r in cat_a[:5]:
+            out.append(short_line(r))
     else:
         out.append("  — No stocks meet Cat A criteria —")
     out.append("")
 
-    # Cat B
+    # Cat B — QUALITY (both BUY and SHORT)
     out.append(f"📊 Cat B — QUALITY (WR≥50%+Conf≥70%+CF≥70%): {len(cat_b)}")
     if cat_b:
+        out.append("  📈 BUY:")
         for r in cat_b[:5]:
             out.append(buy_line(r))
+        out.append("  📉 SHORT:")
+        for r in cat_b[:5]:
+            out.append(short_line(r))
     out.append("")
 
-    # Cat C
+    # Cat C — WATCHLIST (both BUY and SHORT)
     out.append(f"📋 Cat C — WATCHLIST (WR≥40%+Conf≥50%+CF≥70%): {len(cat_c)}")
     if cat_c:
+        out.append("  📈 BUY:")
         for r in cat_c[:10]:
             out.append(buy_line(r))
+        out.append("  📉 SHORT:")
+        for r in cat_c[:10]:
+            out.append(short_line(r))
     out.append("")
 
-    # Cat D — SHORT BIAS
+    # Cat D — SHORT BIAS (both BUY and SHORT)
     out.append(f"⚠️ Cat D — SHORT BIAS (RSI>65+Conf≥50%+ML_DOWN): {len(cat_d)}")
     if cat_d:
+        out.append("  📉 SHORT:")
         for r in cat_d[:5]:
             out.append(short_line(r))
+        out.append("  📈 BUY:")
+        for r in cat_d[:5]:
+            out.append(buy_line(r))
     out.append("")
 
     # SUMMARY — BUY
